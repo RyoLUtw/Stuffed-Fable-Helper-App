@@ -7,6 +7,11 @@ const DIE_OPTIONS = [
   { value: 'blue', color: '#3b82f6' },
 ];
 
+const STORAGE_KEYS = {
+  gameplay: 'stuffed-fable/gameplay',
+  timelinePrefix: 'stuffed-fable/timeline/',
+};
+
 const state = {
   mode: 'reading',
   readingTab: 'narrative',
@@ -47,8 +52,267 @@ const state = {
 
 const app = document.getElementById('app');
 
+function storageAvailable() {
+  try {
+    return typeof window !== 'undefined' && 'localStorage' in window && window.localStorage !== null;
+  } catch (error) {
+    console.warn('Local storage is unavailable.', error);
+    return false;
+  }
+}
+
+function getTimelineStorageKey(sceneId) {
+  return `${STORAGE_KEYS.timelinePrefix}${sceneId}`;
+}
+
+function loadTimelineProgress(sceneId) {
+  if (!sceneId || !storageAvailable()) {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(getTimelineStorageKey(sceneId));
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn('Unable to read saved timeline progress.', error);
+    return null;
+  }
+}
+
+function attemptStorageWrite(writeFn, sceneIdToPreserve) {
+  if (!storageAvailable()) {
+    return false;
+  }
+
+  try {
+    writeFn();
+    return true;
+  } catch (error) {
+    if (isQuotaExceededError(error)) {
+      const evicted = evictOldestTimelineEntry(sceneIdToPreserve);
+      if (evicted) {
+        try {
+          writeFn();
+          return true;
+        } catch (retryError) {
+          console.warn('Storage write failed after eviction.', retryError);
+        }
+      }
+    } else {
+      console.warn('Storage write failed.', error);
+    }
+  }
+
+  return false;
+}
+
+function saveTimelineProgress(sceneId) {
+  if (!sceneId || !storageAvailable()) {
+    return;
+  }
+
+  const payload = {
+    selections: state.timelineSelections,
+    attempts: state.timelineAttempts,
+    results: state.timelineResults,
+    updatedAt: Date.now(),
+  };
+
+  const serialized = JSON.stringify(payload);
+  const success = attemptStorageWrite(() => {
+    window.localStorage.setItem(getTimelineStorageKey(sceneId), serialized);
+  }, sceneId);
+  if (!success) {
+    console.warn('Unable to persist timeline progress.');
+  }
+}
+
+function isQuotaExceededError(error) {
+  return (
+    error instanceof DOMException &&
+    (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED' || error.code === 22 || error.code === 1014)
+  );
+}
+
+function evictOldestTimelineEntry(excludeSceneId) {
+  if (!storageAvailable()) {
+    return false;
+  }
+
+  let oldestKey = null;
+  let oldestTimestamp = Number.POSITIVE_INFINITY;
+
+  try {
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key || !key.startsWith(STORAGE_KEYS.timelinePrefix)) {
+        continue;
+      }
+
+      const sceneId = key.slice(STORAGE_KEYS.timelinePrefix.length);
+      if (sceneId === excludeSceneId) {
+        continue;
+      }
+
+      const raw = window.localStorage.getItem(key);
+      if (!raw) {
+        continue;
+      }
+
+      try {
+        const parsed = JSON.parse(raw);
+        const timestamp = Number(parsed?.updatedAt);
+        if (Number.isFinite(timestamp) && timestamp < oldestTimestamp) {
+          oldestTimestamp = timestamp;
+          oldestKey = key;
+        }
+      } catch (parseError) {
+        oldestKey = key;
+        oldestTimestamp = Number.NEGATIVE_INFINITY;
+        break;
+      }
+    }
+
+    if (oldestKey) {
+      window.localStorage.removeItem(oldestKey);
+      return true;
+    }
+  } catch (error) {
+    console.warn('Unable to evict timeline entry.', error);
+  }
+
+  return false;
+}
+
+function loadGameplayProgress() {
+  if (!storageAvailable()) {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.gameplay);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn('Unable to read saved gameplay progress.', error);
+    return null;
+  }
+}
+
+function clampNumber(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  let next = Math.round(numeric);
+  if (Number.isFinite(min) && next < min) {
+    next = min;
+  }
+  if (Number.isFinite(max) && next > max) {
+    next = max;
+  }
+  return next;
+}
+
+function hydrateGameplayState() {
+  const saved = loadGameplayProgress();
+  if (!saved) {
+    return;
+  }
+
+  if (Array.isArray(saved.characters) && saved.characters.length > 0) {
+    state.characters = state.characters.map((character, index) => {
+      const savedCharacter = saved.characters[index];
+      if (!savedCharacter || typeof savedCharacter !== 'object') {
+        return character;
+      }
+
+      const sanitizedItems = Array.isArray(savedCharacter.items)
+        ? savedCharacter.items.filter((item) => typeof item === 'string' && item.trim()).map((item) => item.trim())
+        : [];
+
+      const activeItemIndex =
+        Number.isInteger(savedCharacter.activeItemIndex) &&
+        savedCharacter.activeItemIndex >= 0 &&
+        savedCharacter.activeItemIndex < sanitizedItems.length
+          ? savedCharacter.activeItemIndex
+          : null;
+
+      const dieOption = DIE_OPTIONS.find((option) => option.value === savedCharacter.die)?.value ?? null;
+
+      return {
+        ...character,
+        name: CHARACTER_NAMES.includes(savedCharacter.name) ? savedCharacter.name : character.name,
+        stuffing: clampNumber(savedCharacter.stuffing, 0, 5, character.stuffing),
+        heart: clampNumber(savedCharacter.heart, 0, Number.POSITIVE_INFINITY, character.heart),
+        buttons: clampNumber(savedCharacter.buttons, 0, Number.POSITIVE_INFINITY, character.buttons),
+        die: dieOption,
+        items: sanitizedItems,
+        activeItemIndex,
+      };
+    });
+  }
+
+  if (typeof saved.activeCharacterIndex === 'number') {
+    const indexValue = Math.round(saved.activeCharacterIndex);
+    if (indexValue >= 0 && indexValue < state.characters.length) {
+      state.activeCharacterIndex = indexValue;
+    }
+  }
+}
+
+function saveGameplayProgress() {
+  if (!storageAvailable()) {
+    return;
+  }
+
+  const payload = {
+    activeCharacterIndex: state.activeCharacterIndex,
+    characters: state.characters.map((character) => ({
+      label: character.label,
+      name: character.name,
+      stuffing: character.stuffing,
+      heart: character.heart,
+      buttons: character.buttons,
+      die: character.die,
+      items: [...character.items],
+      activeItemIndex: character.activeItemIndex,
+    })),
+  };
+
+  const success = attemptStorageWrite(() => {
+    window.localStorage.setItem(STORAGE_KEYS.gameplay, JSON.stringify(payload));
+  });
+  if (!success) {
+    console.warn('Unable to persist gameplay progress.');
+  }
+}
+
+function hydrateFromStorage() {
+  hydrateGameplayState();
+}
+
 async function init() {
   renderBaseLayout();
+  hydrateFromStorage();
   renderModeToggle();
   renderReadingNav();
   renderGameplayNav();
@@ -291,6 +555,7 @@ function renderGameplayNav() {
   nav.querySelectorAll('.tab-button').forEach((button) => {
     button.addEventListener('click', () => {
       state.activeCharacterIndex = Number(button.dataset.characterIndex);
+      saveGameplayProgress();
       renderGameplayNav();
       renderContent();
     });
@@ -314,15 +579,13 @@ function prepareScene(sceneId) {
     return map;
   }, {});
 
-  prepareTimeline(scene);
+  prepareTimeline(sceneId, scene);
   state.readingTab = 'narrative';
-  state.timelineResults = {};
-  state.timelineAttempts = 0;
   state.activeTimelineTile = null;
   renderReadingNav();
 }
 
-function prepareTimeline(scene) {
+function prepareTimeline(sceneId, scene) {
   const events = scene?.timeline?.events ?? [];
   const blanks = events.filter((event) => event.type === 'blank');
   const blankTexts = blanks.map((event) => event.text);
@@ -332,6 +595,47 @@ function prepareTimeline(scene) {
   state.timelineConflicts = new Set();
   state.timelineResults = {};
   state.timelineAttempts = 0;
+
+  const saved = loadTimelineProgress(sceneId);
+  if (saved) {
+    const selections = saved.selections && typeof saved.selections === 'object' ? saved.selections : {};
+    const normalizedSelections = {};
+    Object.entries(selections).forEach(([index, value]) => {
+      const numericIndex = Number(index);
+      if (
+        Number.isInteger(numericIndex) &&
+        numericIndex >= 0 &&
+        numericIndex < events.length &&
+        events[numericIndex]?.type === 'blank' &&
+        typeof value === 'string' &&
+        value
+      ) {
+        normalizedSelections[numericIndex] = value;
+      }
+    });
+
+    const results = saved.results && typeof saved.results === 'object' ? saved.results : {};
+    const normalizedResults = {};
+    Object.entries(results).forEach(([index, value]) => {
+      const numericIndex = Number(index);
+      if (
+        Number.isInteger(numericIndex) &&
+        numericIndex >= 0 &&
+        numericIndex < events.length &&
+        events[numericIndex]?.type === 'blank' &&
+        (value === 'correct' || value === 'incorrect')
+      ) {
+        normalizedResults[numericIndex] = value;
+      }
+    });
+
+    state.timelineSelections = normalizedSelections;
+    state.timelineResults = normalizedResults;
+    if (Number.isFinite(saved.attempts)) {
+      state.timelineAttempts = Math.max(0, Math.floor(saved.attempts));
+    }
+    updateTimelineConflicts();
+  }
 }
 
 function renderContent() {
@@ -494,6 +798,7 @@ function renderGameplayContent(container) {
   nameRow.querySelector('select').addEventListener('change', (event) => {
     activeCharacter.name = event.target.value;
     renderGameplayNav();
+    saveGameplayProgress();
     renderContent();
   });
 
@@ -519,6 +824,7 @@ function renderGameplayContent(container) {
     }
     button.addEventListener('click', () => {
       activeCharacter.die = option.value === activeCharacter.die ? null : option.value;
+      saveGameplayProgress();
       renderContent();
     });
     dieOptions.appendChild(button);
@@ -558,6 +864,7 @@ function renderGameplayContent(container) {
 
       tile.addEventListener('click', () => {
         activeCharacter.activeItemIndex = activeCharacter.activeItemIndex === index ? null : index;
+        saveGameplayProgress();
         renderContent();
       });
 
@@ -566,6 +873,7 @@ function renderGameplayContent(container) {
         const updated = prompt('Update item', item);
         if (updated && updated.trim()) {
           activeCharacter.items[index] = updated.trim();
+          saveGameplayProgress();
           renderContent();
         }
       });
@@ -576,6 +884,7 @@ function renderGameplayContent(container) {
         if (activeCharacter.activeItemIndex === index) {
           activeCharacter.activeItemIndex = null;
         }
+        saveGameplayProgress();
         renderContent();
       });
 
@@ -593,6 +902,7 @@ function renderGameplayContent(container) {
     const newItem = prompt('Add new item');
     if (newItem && newItem.trim()) {
       activeCharacter.items.push(newItem.trim());
+      saveGameplayProgress();
       renderContent();
     }
   });
@@ -621,6 +931,7 @@ function createCounterRow(labelText, key, character, { min = Number.NEGATIVE_INF
     const next = Number.isFinite(min) ? Math.max(character[key] - 1, min) : character[key] - 1;
     if (next !== character[key]) {
       character[key] = next;
+      saveGameplayProgress();
       renderContent();
     }
   });
@@ -637,6 +948,7 @@ function createCounterRow(labelText, key, character, { min = Number.NEGATIVE_INF
     const next = Number.isFinite(max) ? Math.min(character[key] + 1, max) : character[key] + 1;
     if (next !== character[key]) {
       character[key] = next;
+      saveGameplayProgress();
       renderContent();
     }
   });
@@ -700,6 +1012,7 @@ function openTimelineModal() {
         state.timelineSelections[state.activeTimelineTile] = option;
         state.timelineResults = {};
         updateTimelineConflicts();
+        saveTimelineProgress(state.selectedSceneId);
         closeModal('timelineModal');
         state.activeTimelineTile = null;
         renderContent();
@@ -731,6 +1044,7 @@ function evaluateTimeline(scene) {
   });
   state.timelineResults = results;
   state.timelineAttempts += 1;
+  saveTimelineProgress(state.selectedSceneId);
   renderContent();
 }
 
