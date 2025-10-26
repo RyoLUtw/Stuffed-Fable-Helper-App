@@ -107,6 +107,27 @@ async function loadScenes() {
 }
 
 async function discoverSceneFiles() {
+  try {
+    const response = await fetch('./scenes/scene-index.json', { cache: 'no-cache' });
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data.files)) {
+        const files = data.files
+          .filter((file) => typeof file === 'string' && file.endsWith('.json'))
+          .filter((file) => !file.endsWith('scene-index.json'))
+          .sort((a, b) => a.localeCompare(b));
+
+        if (files.length > 0) {
+          return files;
+        }
+      }
+    } else {
+      console.warn('Scene manifest returned a non-success status.', response.status);
+    }
+  } catch (manifestError) {
+    console.warn('Unable to load scene manifest. Attempting directory listing fallback.', manifestError);
+  }
+
   const directoryUrl = './scenes/';
 
   try {
@@ -134,22 +155,7 @@ async function discoverSceneFiles() {
       }
     }
   } catch (error) {
-    console.warn('Directory listing unavailable, falling back to manifest file.', error);
-  }
-
-  try {
-    const response = await fetch('./scenes/scene-index.json', { cache: 'no-cache' });
-    if (response.ok) {
-      const data = await response.json();
-      if (Array.isArray(data.files)) {
-        return data.files
-          .filter((file) => typeof file === 'string' && file.endsWith('.json'))
-          .filter((file) => !file.endsWith('scene-index.json'))
-          .sort((a, b) => a.localeCompare(b));
-      }
-    }
-  } catch (manifestError) {
-    console.error('Unable to load scene manifest.', manifestError);
+    console.warn('Directory listing unavailable.', error);
   }
 
   return [];
