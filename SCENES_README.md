@@ -1,6 +1,8 @@
 # Scene JSON Guide
 
-Store all playable scenes inside the `scenes/` directory at the root of the project. Each file should follow the naming pattern `[page]-[scene].json` (for example, `7-1.json` or `5-3.json`). The application automatically imports every JSON file in that folder, sorts them alphabetically by filename, and uses the filename (without the extension) for the scene selector.
+Store all playable scenes inside the `scenes/` directory at the root of the project. Each file should follow the naming pattern `[page]-[scene].json` (for example, `7-1.json` or `5-3.json`). The application automatically locates every JSON file in that folder, sorts them alphabetically by filename, and uses the filename (without the extension) for the scene selector.
+
+> **Note:** When the host environment does not expose a directory listing (some static hosts disable it), the app falls back to the optional [`scenes/scene-index.json`](./scenes/scene-index.json) manifest. Running `node scripts/update-scene-index.mjs` (see below) regenerates that manifest so the selector stays in sync.
 
 ## File Structure
 
@@ -52,4 +54,12 @@ Each scene file should match the structure shown below. A reusable starter is av
 ### Tips
 - Keep vocabulary words lowercase in the JSON to ensure consistent highlighting.
 - Anchor events should appear in the sequence exactly where they belong. Blank events will display in timeline order but require player input.
-- When a new scene file is added, reload the webpage to see it appear in the selector automatically.
+- When a new scene file is added, reload the webpage to see it appear in the selector automatically. If your hosting environment does not expose directory listings, re-run the manifest script below and redeploy the updated `scene-index.json`.
+
+### Manifest helper script
+
+The optional helper below rebuilds the fallback manifest for environments that hide directory listings.
+
+```bash
+node scripts/update-scene-index.mjs
+```

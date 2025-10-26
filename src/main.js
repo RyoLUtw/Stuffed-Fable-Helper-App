@@ -1,13 +1,3 @@
-import './styles.css';
-
-const sceneModules = import.meta.glob('../scenes/*.json', { eager: true });
-const scenes = Object.entries(sceneModules)
-  .map(([path, data]) => ({
-    id: path.split('/').pop().replace('.json', ''),
-    data,
-  }))
-  .sort((a, b) => a.id.localeCompare(b.id));
-
 const CHARACTER_NAMES = ['Lumpy', 'Flops', 'Theadora', 'Stitch', 'Piggle', 'Lionel'];
 const DIE_OPTIONS = [
   { value: 'green', color: '#34d399' },
@@ -20,7 +10,9 @@ const DIE_OPTIONS = [
 const state = {
   mode: 'reading',
   readingTab: 'narrative',
-  selectedSceneId: scenes[0]?.id ?? null,
+  scenes: [],
+  selectedSceneId: null,
+  isLoadingScenes: true,
   vocabularyMap: {},
   timelineOptionPool: [],
   timelineSelections: {},
@@ -55,13 +47,112 @@ const state = {
 
 const app = document.getElementById('app');
 
-function init() {
+async function init() {
   renderBaseLayout();
+  renderModeToggle();
   renderReadingNav();
   renderGameplayNav();
-  prepareScene(state.selectedSceneId);
-  renderModeToggle();
+  await loadScenes();
+
+  if (state.scenes.length > 0) {
+    state.selectedSceneId = state.scenes[0].id;
+    prepareScene(state.selectedSceneId);
+  } else {
+    prepareScene(null);
+  }
+
+  renderReadingNav();
   renderContent();
+}
+
+async function loadScenes() {
+  state.isLoadingScenes = true;
+  renderReadingNav();
+
+  try {
+    const files = await discoverSceneFiles();
+    const loadedScenes = [];
+
+    for (const fileName of files) {
+      try {
+        const response = await fetch(`./scenes/${fileName}`, { cache: 'no-cache' });
+        if (!response.ok) {
+          console.error(`Unable to load scene file: ${fileName}`);
+          continue;
+        }
+
+        const data = await response.json();
+        loadedScenes.push({
+          id: fileName.replace(/\.json$/i, ''),
+          data,
+        });
+      } catch (error) {
+        console.error(`Error parsing scene file: ${fileName}`, error);
+      }
+    }
+
+    loadedScenes.sort((a, b) => a.id.localeCompare(b.id));
+    state.scenes = loadedScenes;
+
+    if (!loadedScenes.some((scene) => scene.id === state.selectedSceneId)) {
+      state.selectedSceneId = loadedScenes[0]?.id ?? null;
+    }
+  } catch (error) {
+    console.error('Failed to discover scenes', error);
+    state.scenes = [];
+    state.selectedSceneId = null;
+  } finally {
+    state.isLoadingScenes = false;
+  }
+}
+
+async function discoverSceneFiles() {
+  const directoryUrl = './scenes/';
+
+  try {
+    const response = await fetch(directoryUrl, {
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+    });
+
+    if (response.ok) {
+      const contentType = response.headers.get('Content-Type') ?? '';
+      if (contentType.includes('text/html')) {
+        const html = await response.text();
+        const parser = new DOMParser();
+        const documentFragment = parser.parseFromString(html, 'text/html');
+        const files = Array.from(documentFragment.querySelectorAll('a'))
+          .map((anchor) => anchor.getAttribute('href') ?? '')
+          .map((href) => href.replace(/\/$/, ''))
+          .filter((href) => href.endsWith('.json'))
+          .filter((href) => !href.endsWith('scene-index.json'))
+          .map((href) => href.split('/').pop())
+          .filter(Boolean);
+
+        if (files.length > 0) {
+          return Array.from(new Set(files)).sort((a, b) => a.localeCompare(b));
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Directory listing unavailable, falling back to manifest file.', error);
+  }
+
+  try {
+    const response = await fetch('./scenes/scene-index.json', { cache: 'no-cache' });
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data.files)) {
+        return data.files
+          .filter((file) => typeof file === 'string' && file.endsWith('.json'))
+          .filter((file) => !file.endsWith('scene-index.json'))
+          .sort((a, b) => a.localeCompare(b));
+      }
+    }
+  } catch (manifestError) {
+    console.error('Unable to load scene manifest.', manifestError);
+  }
+
+  return [];
 }
 
 function renderBaseLayout() {
@@ -130,16 +221,23 @@ function toggleNavVisibility() {
 
 function renderReadingNav() {
   const nav = document.getElementById('readingNav');
-  const options = scenes
+  const options = state.scenes
     .map((scene) => `<option value="${scene.id}" ${scene.id === state.selectedSceneId ? 'selected' : ''}>${scene.id}</option>`)
     .join('');
-  const placeholder = scenes.length === 0 ? '<option selected disabled>No scenes found</option>' : '';
+  let selectMarkup = options;
+
+  if (state.isLoadingScenes) {
+    selectMarkup = '<option selected disabled>Loading scenes…</option>';
+  } else if (state.scenes.length === 0) {
+    selectMarkup = '<option selected disabled>No scenes found</option>';
+  }
+
   nav.innerHTML = `
     <span class="nav-title">Reading Mode</span>
     <div class="select-control">
       <label for="sceneSelect">Page · Scene</label>
-      <select id="sceneSelect" ${scenes.length === 0 ? 'disabled' : ''}>
-        ${placeholder || options}
+      <select id="sceneSelect" ${state.isLoadingScenes || state.scenes.length === 0 ? 'disabled' : ''}>
+        ${selectMarkup}
       </select>
     </div>
     <div class="tab-group" role="tablist">
@@ -242,6 +340,14 @@ function renderContent() {
 }
 
 function renderReadingContent(container) {
+  if (state.isLoadingScenes) {
+    const message = document.createElement('div');
+    message.className = 'card';
+    message.innerHTML = '<p>Loading scenes…</p>';
+    container.appendChild(message);
+    return;
+  }
+
   if (!state.selectedSceneId) {
     const message = document.createElement('div');
     message.className = 'card';
@@ -650,7 +756,9 @@ function shuffle(array) {
 }
 
 function getScene(id) {
-  return scenes.find((scene) => scene.id === id)?.data ?? null;
+  return state.scenes.find((scene) => scene.id === id)?.data ?? null;
 }
 
-init();
+window.addEventListener('DOMContentLoaded', () => {
+  init();
+});
