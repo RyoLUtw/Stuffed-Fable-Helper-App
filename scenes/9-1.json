@@ -1,0 +1,111 @@
+{
+  "narrative": {
+    "title": "Scene 9-1",
+    "paragraphs": [
+      "They had no time to empty the wagon. Everyone scrambled in except Lumpy, who pushed from the rear. The work was rough; his determined effort finally move the wagon. He climbed aboard as it shot down the pile of garbage and struck all manner of strange shapes, bouncing so hard the stuffies screamed. “How will we stop this thing?” Lumpy cried. “I don’t think you’ll like the answer,” Flops replied. Theadora pointed at the base of the heap, where a small ramp stuck out. “Aim for that ramp!” she shouted. “Hit it just right, and we can catch the train!”"
+    ],
+    "vocabulary": [
+      {
+        "word": "empty",
+        "definition": "remove all contents from something.",
+        "examples": [
+          "Please empty your pockets before the ride.",
+          "They empty the box to look for the missing piece."
+        ]
+      },
+      {
+        "word": "except",
+        "definition": "not including; other than.",
+        "examples": [
+          "Everyone came except Leo.",
+          "Take any path except the one with warning signs."
+        ]
+      },
+      {
+        "word": "rear",
+        "definition": "the back part of something.",
+        "examples": [
+          "The rear door was locked.",
+          "A wheel at the rear started to wobble."
+        ]
+      },
+      {
+        "word": "determined",
+        "definition": "having a strong will to keep going or to achieve something.",
+        "examples": [
+          "She gave a determined nod and stepped forward.",
+          "With a determined breath, he lifted the crate."
+        ]
+      },
+      {
+        "word": "struck",
+        "definition": "hit against something (past tense of “strike”).",
+        "examples": [
+          "The cart struck a rock and jolted sideways.",
+          "Lightning struck the tree during the storm."
+        ]
+      },
+      {
+        "word": "manner of",
+        "definition": "a kind or type of; many different sorts.",
+        "examples": [
+          "They saw all manner of tools on the bench.",
+          "The path was cluttered with manner of debris."
+        ]
+      },
+      {
+        "word": "replied",
+        "definition": "answered someone in words; past tense of reply.",
+        "examples": [
+          "“We’ll be fine,” she replied calmly.",
+          "He paused, then replied with a plan."
+        ]
+      },
+      {
+        "word": "aim",
+        "definition": "point or direct toward a target or goal.",
+        "examples": [
+          "Aim for the center of the ring.",
+          "They aim the sled at the safest gap."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "There is no time to empty the wagon of toys."
+      },
+      {
+        "type": "blank",
+        "text": "Everyone jumps in except Lumpy, who pushes from the rear."
+      },
+      {
+        "type": "blank",
+        "text": "The push is hard work; Lumpy gives a determined effort as the wagon starts to roll."
+      },
+      {
+        "type": "anchor",
+        "text": "Lumpy barely climbs aboard as the wagon shoots down."
+      },
+      {
+        "type": "blank",
+        "text": "The wagon struck all manner of strange shapes, making the stuffies scream."
+      },
+      {
+        "type": "blank",
+        "text": "Lumpy shouts, asking how they will stop the runaway wagon."
+      },
+      {
+        "type": "anchor",
+        "text": "Theadora points at a ramp and tells them to aim for it to catch the train."
+      }
+    ],
+    "distractors": [
+      "They take their time to empty the wagon before boarding.",
+      "Flops pushes from the rear while Lumpy climbs in first.",
+      "Theadora tells them to avoid the ramp and stop before the tracks."
+    ]
+  }
+}
