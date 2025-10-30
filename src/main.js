@@ -6,6 +6,17 @@ const DIE_OPTIONS = [
   { value: 'purple', color: '#a855f7' },
   { value: 'blue', color: '#3b82f6' },
 ];
+const STATUS_OPTIONS = [
+  { value: 'worried', label: 'Worried' },
+  { value: 'scorched', label: 'Scorched' },
+  { value: 'scared', label: 'Scared' },
+  { value: 'soggy', label: 'Soggy' },
+  { value: 'courageous', label: 'Courageous' },
+  { value: 'trapped', label: 'Trapped' },
+  { value: 'angry', label: 'Angry' },
+  { value: 'torn', label: 'Torn' },
+  { value: "skreela's mark", label: "Skreela's Mark" },
+];
 
 const STORAGE_KEYS = {
   gameplay: 'stuffed-fable/gameplay',
@@ -33,6 +44,7 @@ const state = {
       heart: 0,
       buttons: 0,
       die: null,
+      statuses: [],
       items: [],
       activeItemIndex: null,
     },
@@ -43,6 +55,7 @@ const state = {
       heart: 0,
       buttons: 0,
       die: null,
+      statuses: [],
       items: [],
       activeItemIndex: null,
     },
@@ -257,6 +270,15 @@ function hydrateGameplayState() {
           : null;
 
       const dieOption = DIE_OPTIONS.find((option) => option.value === savedCharacter.die)?.value ?? null;
+      const validStatuses = Array.isArray(savedCharacter.statuses)
+        ? Array.from(
+            new Set(
+              savedCharacter.statuses.filter((status) =>
+                STATUS_OPTIONS.some((option) => option.value === status)
+              )
+            )
+          )
+        : [];
 
       return {
         ...character,
@@ -265,6 +287,7 @@ function hydrateGameplayState() {
         heart: clampNumber(savedCharacter.heart, 0, Number.POSITIVE_INFINITY, character.heart),
         buttons: clampNumber(savedCharacter.buttons, 0, Number.POSITIVE_INFINITY, character.buttons),
         die: dieOption,
+        statuses: validStatuses,
         items: sanitizedItems,
         activeItemIndex,
       };
@@ -293,6 +316,7 @@ function saveGameplayProgress() {
       heart: character.heart,
       buttons: character.buttons,
       die: character.die,
+      statuses: [...character.statuses],
       items: [...character.items],
       activeItemIndex: character.activeItemIndex,
     })),
@@ -832,6 +856,36 @@ function renderGameplayContent(container) {
 
   dieRow.appendChild(dieOptions);
   card.appendChild(dieRow);
+
+  const statusRow = document.createElement('div');
+  statusRow.className = 'character-row';
+  const statusLabel = document.createElement('label');
+  statusLabel.textContent = 'Status Effects';
+  statusRow.appendChild(statusLabel);
+  const statusOptions = document.createElement('div');
+  statusOptions.className = 'status-options';
+
+  STATUS_OPTIONS.forEach((option) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'status-option';
+    button.textContent = option.label;
+    if (activeCharacter.statuses.includes(option.value)) {
+      button.classList.add('selected');
+    }
+    button.addEventListener('click', () => {
+      const hasStatus = activeCharacter.statuses.includes(option.value);
+      activeCharacter.statuses = hasStatus
+        ? activeCharacter.statuses.filter((status) => status !== option.value)
+        : [...activeCharacter.statuses, option.value];
+      saveGameplayProgress();
+      renderContent();
+    });
+    statusOptions.appendChild(button);
+  });
+
+  statusRow.appendChild(statusOptions);
+  card.appendChild(statusRow);
 
   const itemsSection = document.createElement('div');
   itemsSection.className = 'items-section';
