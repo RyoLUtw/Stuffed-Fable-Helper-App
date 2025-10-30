@@ -1,0 +1,100 @@
+{
+  "narrative": {
+    "title": "Scene 5-3 — The Blanket Tug",
+    "paragraphs": [
+      "The crawlies fight halfheartedly; they care more about stealing. Theadora raises her voice to declare that nothing should be taken. Two crawlies slip back under the bed with small things.",
+      "Then one tries to drag the baby blanket below. Flops dives to grab a corner and slides across the floor. Stitch catches her legs while Theadora and Lumpy push against the bed. The blanket begins to move toward them, but a sudden pull breaks their hold. The stuffies tumble into the purple space under the bed."
+    ],
+    "vocabulary": [
+      {
+        "word": "halfheartedly",
+        "definition": "Without much effort or real interest.",
+        "examples": [
+          "He cleaned halfheartedly and missed the corners.",
+          "They cheered halfheartedly after the loss."
+        ]
+      },
+      {
+        "word": "declare",
+        "definition": "To say something clearly and strongly.",
+        "examples": [
+          "I declare the contest open.",
+          "The captain declare the plan."
+        ]
+      },
+      {
+        "word": "slip back",
+        "definition": "To move quietly or easily back to a place.",
+        "examples": [
+          "The cat will slip back into the garden.",
+          "We slip back before anyone sees us."
+        ]
+      },
+      {
+        "word": "drag",
+        "definition": "To pull something along the ground.",
+        "examples": [
+          "They drag the box across the floor.",
+          "Waves drag seaweed to shore."
+        ]
+      },
+      {
+        "word": "blanket",
+        "definition": "A warm cover used on a bed.",
+        "examples": [
+          "She hugged the blanket tightly.",
+          "The baby reached for the blanket."
+        ]
+      },
+      {
+        "word": "grab",
+        "definition": "To take hold of something quickly and firmly.",
+        "examples": [
+          "Grab my hand before you fall.",
+          "He tried to grab the last seat."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The crawlies fight halfheartedly, focusing on stealing items."
+      },
+      {
+        "type": "blank",
+        "text": "“Don’t let them take a single thing!” Theadora declares."
+      },
+      {
+        "type": "blank",
+        "text": "Two crawlies slip back under the bed with small objects."
+      },
+      {
+        "type": "blank",
+        "text": "Flops spots a crawly dragging the baby blanket."
+      },
+      {
+        "type": "blank",
+        "text": "Flops dives and grabs a corner; she begins to slide across the floor."
+      },
+      {
+        "type": "blank",
+        "text": "Stitch holds Flops’s legs; Theadora and Lumpy pile on and brace against the bed."
+      },
+      {
+        "type": "blank",
+        "text": "They start pulling the blanket out; then a great tug rips them free of the bed."
+      },
+      {
+        "type": "blank",
+        "text": "All four are yanked into the purple unknown; the girl shivers in her sleep."
+      }
+    ],
+    "distractors": [
+      "Theadora declares they should take everything.",
+      "Two crawlies slip back into the closet with small objects.",
+      "Flops spots a crawly dragging the baby pillow."
+    ]
+  }
+}

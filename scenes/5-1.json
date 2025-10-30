@@ -1,0 +1,72 @@
+{
+  "narrative": {
+    "title": "Scene 5-1 — Omen Under the Bed",
+    "paragraphs": [
+      "The stuffies slip off the bed and creep into the hall. Behind them, an ominous purple glow starts underneath the big girl bed. From the light, long, spidery legs reach into the room. The sight makes them freeze.",
+      "They hurry back and get ready. They check their things and stand close together. The glow grows and fades like breathing. The stuffies keep still and wait for what will come next."
+    ],
+    "vocabulary": [
+      {
+        "word": "ominous",
+        "definition": "Giving a feeling that something bad might happen.",
+        "examples": [
+          "An ominous cloud rolled in over the park.",
+          "The hallway grew quiet in an ominous way."
+        ]
+      },
+      {
+        "word": "underneath",
+        "definition": "Directly below something.",
+        "examples": [
+          "The suitcase was underneath the bed.",
+          "A coin slipped underneath the sofa."
+        ]
+      },
+      {
+        "word": "glow",
+        "definition": "A soft, steady light.",
+        "examples": [
+          "A small glow came from the nightlight.",
+          "The campfire’s glow warmed our hands."
+        ]
+      },
+      {
+        "word": "spidery",
+        "definition": "Thin and long like a spider’s legs.",
+        "examples": [
+          "Spidery cracks spread across the glass.",
+          "She drew spidery lines on the map."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The stuffies slide off the bed and tiptoe out of the room."
+      },
+      {
+        "type": "blank",
+        "text": "As they explore the dark house, an ominous purple glow starts to form underneath the big girl bed."
+      },
+      {
+        "type": "blank",
+        "text": "From the light, long, spidery legs appear."
+      },
+      {
+        "type": "blank",
+        "text": "The book calls for everyone to gear up with certain item cards."
+      },
+      {
+        "type": "blank",
+        "text": "The story directs players onward to the next section."
+      }
+    ],
+    "distractors": [
+      "As they explore the dark house, a cheerful blue glow starts underneath the big girl bed.",
+      "From the light, short, stubby legs appear.",
+      "The book calls for everyone to gear up with Garden items."
+    ]
+  }
+}
