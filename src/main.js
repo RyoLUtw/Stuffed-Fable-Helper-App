@@ -5,6 +5,7 @@ const DIE_OPTIONS = [
   { value: 'orange', color: '#fb923c' },
   { value: 'purple', color: '#a855f7' },
   { value: 'blue', color: '#3b82f6' },
+  { value: 'white', color: '#ffffff' },
 ];
 const STATUS_OPTIONS = [
   { value: 'worried', label: 'Worried' },
