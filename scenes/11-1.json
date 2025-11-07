@@ -1,0 +1,87 @@
+{
+  "narrative": {
+    "title": "11-1 — Stop That Train!",
+    "paragraphs": [
+      "They pushed forward along the cars. Flops said to the group that this was a foul place, and soon Theadora spotted the crawly ahead. The blanket passed into the claws of a larger, menacing figure whose torso held a heart-shaped hole, gaping and cold. Thin black vapor leaked from it as the train rattled on. “We’re not turning back,” Stitch said, and they ready themselves to take the fight onto that car."
+    ],
+    "vocabulary": [
+      {
+        "word": "foul",
+        "definition": "very unpleasant; dirty or offensive.",
+        "examples": [
+          "A foul smell drifted from the alley.",
+          "The referee called a foul play."
+        ]
+      },
+      {
+        "word": "spotted",
+        "definition": "saw or noticed quickly.",
+        "examples": [
+          "She spotted her friend across the crowd.",
+          "We spotted smoke and checked the kitchen."
+        ]
+      },
+      {
+        "word": "menacing",
+        "definition": "threatening to cause harm; scary.",
+        "examples": [
+          "Dark clouds looked menacing before the storm.",
+          "The dog gave a menacing growl."
+        ]
+      },
+      {
+        "word": "torso",
+        "definition": "the main part of a body (without head, arms, legs).",
+        "examples": [
+          "The statue’s torso was cracked.",
+          "He wore armor over his torso."
+        ]
+      },
+      {
+        "word": "gaping",
+        "definition": "very wide open.",
+        "examples": [
+          "A gaping hole in the fence made the yard unsafe.",
+          "She stared with a gaping mouth."
+        ]
+      },
+      {
+        "word": "vapor",
+        "definition": "tiny drops of liquid in the air; mist.",
+        "examples": [
+          "Warm vapor fogged the bathroom mirror.",
+          "You can see your breath as vapor on a cold day."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "They advanced along the moving cars, refusing to retreat."
+      },
+      {
+        "type": "blank",
+        "text": "A larger enemy took possession of the blanket from a smaller one."
+      },
+      {
+        "type": "blank",
+        "text": "The creature showed an unnatural hole in its chest."
+      },
+      {
+        "type": "blank",
+        "text": "A dark mist seeped from the opening as the chase continued."
+      },
+      {
+        "type": "anchor",
+        "text": "They decided to confront the enemy on its own car."
+      }
+    ],
+    "distractors": [
+      "Theadora safely pocketed the blanket.",
+      "The train slowed for passengers.",
+      "Lumpy suggested a break."
+    ]
+  }
+}

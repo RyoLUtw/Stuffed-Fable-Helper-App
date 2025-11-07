@@ -1,0 +1,28 @@
+{
+  "narrative": {
+    "title": "Scene Title",
+    "paragraphs": [
+      "Narrative paragraph one.",
+      "Additional narrative paragraph text."
+    ],
+    "vocabulary": [
+      {
+        "word": "target word",
+        "definition": "student-friendly definition.",
+        "examples": [
+          "Example sentence one using the target word.",
+          "Example sentence two using the target word."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      { "type": "anchor", "text": "Anchor event description." },
+      { "type": "blank", "text": "Blank event description." }
+    ],
+    "distractors": [
+      "Distractor event text."
+    ]
+  }
+}

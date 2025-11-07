@@ -1,0 +1,10 @@
+{
+  "name": "stuffed-fable-helper-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "update:scenes": "node scripts/update-scene-index.mjs"
+  },
+  "dependencies": {}
+}

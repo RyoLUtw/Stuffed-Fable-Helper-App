@@ -1,0 +1,135 @@
+{
+  "narrative": {
+    "title": "11-ex-1 — Rail Window Vistas",
+    "paragraphs": [
+      "The ride afforded time to observe the lands of the Fall. The scenery shifted, yet the sickly sky held. On the horizon, a false dawn burned violet. Farther on, a pile-studded plain fell away and the track bent into trees that has little resemblance to home, their limbs weaving a tunnel. A winding bridge carried them over a river where strangers drifted on a raft."
+    ],
+    "vocabulary": [
+      {
+        "word": "afforded",
+        "definition": "gave or provided an opportunity.",
+        "examples": [
+          "The window afforded a view of the sea.",
+          "The break afforded us time to rest."
+        ]
+      },
+      {
+        "word": "observe",
+        "definition": "to watch carefully.",
+        "examples": [
+          "We observed the ants at work.",
+          "Please observe how she solves the problem."
+        ]
+      },
+      {
+        "word": "scenery",
+        "definition": "the natural features of a place (what you see).",
+        "examples": [
+          "Mountain scenery can be calming.",
+          "The train ride had lovely scenery."
+        ]
+      },
+      {
+        "word": "horizon",
+        "definition": "where the earth/sea seems to meet the sky.",
+        "examples": [
+          "The sun dipped below the horizon.",
+          "Storm clouds gathered on the horizon."
+        ]
+      },
+      {
+        "word": "violet",
+        "definition": "a purple color.",
+        "examples": [
+          "The sky turned violet at dusk.",
+          "She wore a violet scarf."
+        ]
+      },
+      {
+        "word": "pile",
+        "definition": "a large heap of things.",
+        "examples": [
+          "A pile of books blocked the door.",
+          "Leaves lay in piles on the lawn."
+        ]
+      },
+      {
+        "word": "track",
+        "definition": "rails for trains; a path.",
+        "examples": [
+          "The tracks curved into a tunnel.",
+          "Runners stayed in their lanes on the track."
+        ]
+      },
+      {
+        "word": "resemblance",
+        "definition": "being similar in look.",
+        "examples": [
+          "The twins had a strong resemblance.",
+          "This copy bears little resemblance to the original."
+        ]
+      },
+      {
+        "word": "tunnel",
+        "definition": "a passage dug through earth or rock.",
+        "examples": [
+          "The road goes through a tunnel.",
+          "The kids built a snow tunnel."
+        ]
+      },
+      {
+        "word": "winding",
+        "definition": "curving and turning many times.",
+        "examples": [
+          "A winding road climbed the hill.",
+          "The winding river glittered in the sun."
+        ]
+      },
+      {
+        "word": "dawn",
+        "definition": "the time when the sun first appears in the morning.",
+        "examples": [
+          "Birds began to sing at dawn.",
+          "We started our hike at dawn."
+        ]
+      },
+      {
+        "word": "studded",
+        "definition": "covered or dotted with many small pieces of something.",
+        "examples": [
+          "A sky studded with stars.",
+          "A path studded with stones slowed our walk."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The ride gave them time to watch the strange land."
+      },
+      {
+        "type": "blank",
+        "text": "A sickly sky stayed the same even as views changed."
+      },
+      {
+        "type": "blank",
+        "text": "A distant glow colored the edge of the world."
+      },
+      {
+        "type": "anchor",
+        "text": "The train curved into trees that arched overhead."
+      },
+      {
+        "type": "blank",
+        "text": "A bridge crossed a river where unknown travelers drifted."
+      }
+    ],
+    "distractors": [
+      "Snow buried the tracks.",
+      "A city skyline flashed by.",
+      "A lighthouse guided the train."
+    ]
+  }
+}

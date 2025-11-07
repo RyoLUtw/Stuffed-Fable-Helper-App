@@ -1,0 +1,155 @@
+{
+  "narrative": {
+    "title": "Scene 3-1",
+    "paragraphs": [
+      "Daddy spends the afternoon assembling the new bed; the old crib is taken apart, and they pack the crib away in the attic. The girl tests the change during the day and naps in the new bed several times.",
+      "That night, Mommy and Daddy share a worried glance as she climbs under the covers. They tuck her in, smooth the blanket, and tiptoe into the hall, leaving the door slightly open while the house slowly becomes quiet.",
+      "Theadora sits up to check the child, attentive and careful, still wondering about the missing crib. Lumpy looks carefully at the open edge of the bed where bars used to be; his movements are small and anxious.",
+      "Flops drops onto the bed with a light giggle, enjoying how bouncy it feels, and Theadora signals her to stop to avoid waking the girl.",
+      "Stitch arrives at last, looking old but experienced. He reminds the stuffies what they sign up for: keeping the girl safe in her sleep. His chest rises bravely. Theadora reads his words as clear advice and steadies the team. They must make sure the girl is safe as the night truly begins."
+    ],
+    "vocabulary": [
+      {
+        "word": "glance",
+        "definition": "a very quick look.",
+        "examples": [
+          "She shot him a worried glance.",
+          "One glance told him it was late."
+        ]
+      },
+      {
+        "word": "assemble",
+        "definition": "put parts together to make something.",
+        "examples": [
+          "They assemble the shelf after lunch.",
+          "We assemble a toy robot at home."
+        ]
+      },
+      {
+        "word": "crib",
+        "definition": "a small bed with high sides for a baby.",
+        "examples": [
+          "He once slept in a crib.",
+          "The old crib is now in storage."
+        ]
+      },
+      {
+        "word": "pack",
+        "definition": "put things into a box or bag for storage or travel.",
+        "examples": [
+          "They pack the decorations away.",
+          "I pack my books into a box."
+        ]
+      },
+      {
+        "word": "tuck",
+        "definition": "place neatly and securely, often for comfort.",
+        "examples": [
+          "Dad tucked the blanket tight.",
+          "She tucked a note into her pocket."
+        ]
+      },
+      {
+        "word": "tiptoe",
+        "definition": "walk quietly on the front part of your feet.",
+        "examples": [
+          "We tiptoe past the room.",
+          "He tiptoes out at midnight."
+        ]
+      },
+      {
+        "word": "anxious",
+        "definition": "worried or nervous about what may happen.",
+        "examples": [
+          "She felt anxious before the test.",
+          "His anxious eyes searched the door."
+        ]
+      },
+      {
+        "word": "giggle",
+        "definition": "a light, happy laugh.",
+        "examples": [
+          "Their giggle broke the silence.",
+          "He tried not to giggle in class."
+        ]
+      },
+      {
+        "word": "bouncy",
+        "definition": "springy; full of bounce.",
+        "examples": [
+          "The ball is bouncy.",
+          "The new mattress felt bouncy."
+        ]
+      },
+      {
+        "word": "sign up for",
+        "definition": "agree to join or take on something.",
+        "examples": [
+          "She will sign up for art club.",
+          "\"This is what we sign up for,\" he said."
+        ]
+      },
+      {
+        "word": "chest",
+        "definition": "the front of the body between neck and stomach.",
+        "examples": [
+          "He held books to his chest.",
+          "She puffed her chest with pride."
+        ]
+      },
+      {
+        "word": "advice",
+        "definition": "helpful ideas or suggestions about what to do.",
+        "examples": [
+          "Good advice saves time.",
+          "He asked a friend for advice."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "blank",
+        "text": "Daddy spends the afternoon assembling the bed; the old crib is taken apart; they pack it away in the attic."
+      },
+      {
+        "type": "blank",
+        "text": "The girl napped in the new bed several times."
+      },
+      {
+        "type": "anchor",
+        "text": "Mommy and Daddy exchange a worried glance as the girl climbs into the new bed."
+      },
+      {
+        "type": "blank",
+        "text": "Her parents tuck her in and tiptoe away, leaving the door slightly open as the house grows still."
+      },
+      {
+        "type": "blank",
+        "text": "Theadora sits up, checks the child, and wonders where the crib went."
+      },
+      {
+        "type": "anchor",
+        "text": "Lumpy notices the missing bars and looks anxious."
+      },
+      {
+        "type": "blank",
+        "text": "Flops lands with a giggle and declares the bed is bouncy; Theadora scolds."
+      },
+      {
+        "type": "blank",
+        "text": "Stitch arrives—the old-timer the others trust."
+      },
+      {
+        "type": "anchor",
+        "text": "Stitch frames the night: “This is what we sign up for.” He puffs his chest; Theadora trusts his advice to plan the watch."
+      }
+    ],
+    "distractors": [
+      "They store the crib in the garage after they pack it away.",
+      "The parents leave and shut the door completely after saying goodnight.",
+      "Flops says the mattress feels hard, and Theadora praises her."
+    ]
+  }
+}
