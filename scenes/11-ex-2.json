@@ -1,0 +1,103 @@
+{
+  "narrative": {
+    "title": "11-ex-2 — The Buried Rocking Horse",
+    "paragraphs": [
+      "“Mpff!” cried a voice, and you discover your foot on a rocking horse’s face, half buried in trash. “Bless my buttons!” you exclaimed. “Sorry, old fellow.” “Don’t bother,” the horse replied with a sigh. “One rocker’s gone. That’s why my girl forgot me.” You wave the others over, hope rising if tools could set him right."
+    ],
+    "vocabulary": [
+      {
+        "word": "discover",
+        "definition": "to find something by chance.",
+        "examples": [
+          "They discovered a shortcut.",
+          "I discovered a note under the door."
+        ]
+      },
+      {
+        "word": "rocking",
+        "definition": "moving back and forth; related to a rocking chair/horse.",
+        "examples": [
+          "The boat was rocking gently.",
+          "The rocking horse creaked."
+        ]
+      },
+      {
+        "word": "buried",
+        "definition": "covered by earth or other material.",
+        "examples": [
+          "The coin was buried in sand.",
+          "The toy was buried under clothes."
+        ]
+      },
+      {
+        "word": "exclaimed",
+        "definition": "cried out suddenly (often with surprise).",
+        "examples": [
+          "“Wow!” she exclaimed when she saw the view.",
+          "He exclaimed at the good news."
+        ]
+      },
+      {
+        "word": "fellow",
+        "definition": "a person/creature in the same group; a companion.",
+        "examples": [
+          "Help your fellow students.",
+          "The stray dog found a fellow traveler."
+        ]
+      },
+      {
+        "word": "bother",
+        "definition": "to take the trouble to do something; to annoy.",
+        "examples": [
+          "Don’t bother with the broken lock.",
+          "Sorry to bother you so late."
+        ]
+      },
+      {
+        "word": "replied",
+        "definition": "answered someone.",
+        "examples": [
+          "She replied after thinking.",
+          "He replied with a joke."
+        ]
+      },
+      {
+        "word": "sigh",
+        "definition": "a long, soft breath showing sadness or relief.",
+        "examples": [
+          "She let out a sigh of relief.",
+          "His tired sigh said everything."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "blank",
+        "text": "A muffled complaint came from underfoot."
+      },
+      {
+        "type": "anchor",
+        "text": "They realized a toy’s face had been stepped on."
+      },
+      {
+        "type": "blank",
+        "text": "An apology drew the group to help."
+      },
+      {
+        "type": "blank",
+        "text": "The toy explained why its owner forgot it."
+      },
+      {
+        "type": "anchor",
+        "text": "Aid was possible with the right tools, though fear lingered."
+      }
+    ],
+    "distractors": [
+      "The toy galloped away happily.",
+      "A child reclaimed the toy on the spot.",
+      "The ground opened into a cave."
+    ]
+  }
+}

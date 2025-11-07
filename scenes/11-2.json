@@ -1,0 +1,103 @@
+{
+  "narrative": {
+    "title": "11-2 — Cars Uncoupled",
+    "paragraphs": [
+      "They pressed the attack across shifting toys and began to stumble. Flops managed to grab a corner of the blanket—then the cars separate suddenly. The pull ripped the fabric, leaving only a patch as the loose cars rolled to an awkward sway and came to a grinding halt in a bleak stretch of nowhere. Cold air met them, and Theadora thought of the child’s shivering hands."
+    ],
+    "vocabulary": [
+      {
+        "word": "stumble",
+        "definition": "to trip or nearly fall while walking.",
+        "examples": [
+          "He stumbled on the steps in the dark.",
+          "Don’t stumble over the toys on the floor."
+        ]
+      },
+      {
+        "word": "grab",
+        "definition": "to take hold of suddenly.",
+        "examples": [
+          "She grabbed the railing to steady herself.",
+          "Grab your coat before we go."
+        ]
+      },
+      {
+        "word": "separate",
+        "definition": "to move apart; to split.",
+        "examples": [
+          "The teams separated after the game.",
+          "The river separates the two towns."
+        ]
+      },
+      {
+        "word": "ripped",
+        "definition": "torn open or apart.",
+        "examples": [
+          "His shirt was ripped on the branch.",
+          "The bag ripped and apples rolled out."
+        ]
+      },
+      {
+        "word": "fabric",
+        "definition": "cloth or material made by weaving or knitting.",
+        "examples": [
+          "The fabric felt soft and warm.",
+          "This fabric is too thin for winter."
+        ]
+      },
+      {
+        "word": "loose",
+        "definition": "not tight or fixed in place.",
+        "examples": [
+          "The lid is loose; tighten it.",
+          "He wore loose pants for comfort."
+        ]
+      },
+      {
+        "word": "awkward",
+        "definition": "not smooth; clumsy or uncomfortable.",
+        "examples": [
+          "The long pause felt awkward.",
+          "She made an awkward turn and bumped the table."
+        ]
+      },
+      {
+        "word": "halt",
+        "definition": "a stop or to stop.",
+        "examples": [
+          "The bus came to a halt at the light.",
+          "Rain brought the game to a halt."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The fight shifted across uneven toys, throwing off their balance."
+      },
+      {
+        "type": "blank",
+        "text": "Someone caught a corner of the blanket before disaster struck."
+      },
+      {
+        "type": "blank",
+        "text": "The train cars split apart mid-battle."
+      },
+      {
+        "type": "anchor",
+        "text": "Only a small piece of the blanket remained after the tear."
+      },
+      {
+        "type": "blank",
+        "text": "The detached cars rolled to a stop in a bleak place."
+      }
+    ],
+    "distractors": [
+      "A guard returned the blanket politely.",
+      "The cars snapped back together.",
+      "A bridge crew rescued them immediately."
+    ]
+  }
+}

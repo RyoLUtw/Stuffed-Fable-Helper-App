@@ -1,0 +1,103 @@
+{
+  "narrative": {
+    "title": "11-3 — Dark Heart Defeated On-Car",
+    "paragraphs": [
+      "You leap the gap with your weapon raised. “Why does he want it?” Lumpy demanded, but the monster only snarled, already diving for the edge. You clutch the blanket as its claws slip, and you watch it vanish into the rushing dark below. The stuffies steady themselves, blanket saved, hearts hammering with relief."
+    ],
+    "vocabulary": [
+      {
+        "word": "leap",
+        "definition": "to jump high or far.",
+        "examples": [
+          "The cat leaped onto the shelf.",
+          "They leaped over puddles to stay dry."
+        ]
+      },
+      {
+        "word": "demand",
+        "definition": "to ask for strongly.",
+        "examples": [
+          "The teacher demanded quiet.",
+          "He demanded a refund at the desk."
+        ]
+      },
+      {
+        "word": "diving",
+        "definition": "jumping headfirst or quickly downward.",
+        "examples": [
+          "The bird was diving toward the lake.",
+          "She came diving for the ball."
+        ]
+      },
+      {
+        "word": "vanish",
+        "definition": "to disappear suddenly.",
+        "examples": [
+          "The rainbow vanished after the rain.",
+          "The magician made the coin vanish."
+        ]
+      },
+      {
+        "word": "snarled",
+        "definition": "grew or spoke in an angry, rough way.",
+        "examples": [
+          "The dog snarled at the fence.",
+          "“Move,” he snarled, and the room went quiet."
+        ]
+      },
+      {
+        "word": "edge",
+        "definition": "the border or outer line of something.",
+        "examples": [
+          "She stood at the edge of the cliff.",
+          "A tear hung on the edge of his eyelid."
+        ]
+      },
+      {
+        "word": "clutch",
+        "definition": "to hold tightly.",
+        "examples": [
+          "Babies clutch a finger instinctively.",
+          "He clutched the railing during the storm."
+        ]
+      },
+      {
+        "word": "relief",
+        "definition": "a light, calm feeling after fear or stress ends.",
+        "examples": [
+          "She sighed with relief when the test was over.",
+          "Rain brought relief to the dry fields."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The jump between cars succeeded."
+      },
+      {
+        "type": "blank",
+        "text": "A question about the villain’s purpose went unanswered."
+      },
+      {
+        "type": "blank",
+        "text": "The foe tried to escape off the side of the train."
+      },
+      {
+        "type": "anchor",
+        "text": "The blanket was secured during the enemy’s retreat."
+      },
+      {
+        "type": "blank",
+        "text": "The enemy disappeared from sight below the wheels."
+      }
+    ],
+    "distractors": [
+      "The blanket turned to dust.",
+      "The enemy begged to join the team.",
+      "The train arrived at a palace."
+    ]
+  }
+}

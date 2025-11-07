@@ -1,0 +1,115 @@
+{
+  "narrative": {
+    "title": "11-4 — Arrival at Squalor",
+    "paragraphs": [
+      "The train coughed and choked like a wounded beast, then suddenly came to a halt beside a crooked town. A cracked board by the tracks read SQUALOR. “Charming,” Flops muttered. “More like Honest,” Theadora replied. Stitch urged quiet steps and kinder words as they moved up the line to seek careful help."
+    ],
+    "vocabulary": [
+      {
+        "word": "cough",
+        "definition": "to force air from lungs with a rough sound.",
+        "examples": [
+          "The dust made him cough.",
+          "She tried to cough quietly in class."
+        ]
+      },
+      {
+        "word": "choke",
+        "definition": "to have trouble breathing; also used for engines or smoke.",
+        "examples": [
+          "Don’t choke on your food.",
+          "The engine choked and died."
+        ]
+      },
+      {
+        "word": "beast",
+        "definition": "a large or frightening animal (figuratively, a machine).",
+        "examples": [
+          "The machine roared like a beast.",
+          "A beast guarded the gate in the story."
+        ]
+      },
+      {
+        "word": "halt",
+        "definition": "a stop or to stop.",
+        "examples": [
+          "The march came to a halt at noon.",
+          "Construction halted due to rain."
+        ]
+      },
+      {
+        "word": "track",
+        "definition": "the rails a train runs on; a path.",
+        "examples": [
+          "Stand clear of the tracks.",
+          "We followed a deer track through the snow."
+        ]
+      },
+      {
+        "word": "replied",
+        "definition": "answered someone.",
+        "examples": [
+          "“Yes,” she replied with a nod.",
+          "He replied to the message later."
+        ]
+      },
+      {
+        "word": "wounded",
+        "definition": "hurt, especially in the body.",
+        "examples": [
+          "The wounded soldier limped to safety.",
+          "A wounded wing kept the bird from flying."
+        ]
+      },
+      {
+        "word": "crooked",
+        "definition": "bent, not straight or level.",
+        "examples": [
+          "A crooked sign swung in the wind.",
+          "His tie was crooked after the rush."
+        ]
+      },
+      {
+        "word": "cracked",
+        "definition": "split slightly, not in pieces.",
+        "examples": [
+          "A cracked window let in a draft.",
+          "The cracked cup still held tea."
+        ]
+      },
+      {
+        "word": "SQUALOR",
+        "definition": "a dirty, poor condition of living (here: the town’s name).",
+        "examples": [
+          "They escaped SQUALOR with hard work.",
+          "The sign read SQUALOR in faded paint."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The train stopped beside a rough town."
+      },
+      {
+        "type": "blank",
+        "text": "A weathered sign named the place they had reached."
+      },
+      {
+        "type": "blank",
+        "text": "Short talk ended as the group focused on the next step."
+      },
+      {
+        "type": "anchor",
+        "text": "Stitch reminded them to ask for help with care and manners."
+      }
+    ],
+    "distractors": [
+      "A parade welcomed them.",
+      "A stationmaster handed over the blanket.",
+      "They slept on the platform."
+    ]
+  }
+}
