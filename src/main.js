@@ -66,6 +66,51 @@ const state = {
 
 const app = document.getElementById('app');
 
+function compareSceneIds(a, b) {
+  const tokenize = (id) =>
+    id
+      .split('-')
+      .map((part) => ({
+        value: part,
+        isNumeric: /^\d+$/.test(part),
+        number: Number(part),
+      }));
+
+  const aParts = tokenize(a);
+  const bParts = tokenize(b);
+  const maxLength = Math.max(aParts.length, bParts.length);
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const aPart = aParts[index];
+    const bPart = bParts[index];
+
+    if (!aPart) {
+      return -1;
+    }
+    if (!bPart) {
+      return 1;
+    }
+
+    if (aPart.isNumeric && bPart.isNumeric) {
+      if (aPart.number !== bPart.number) {
+        return aPart.number - bPart.number;
+      }
+      continue;
+    }
+
+    if (aPart.isNumeric !== bPart.isNumeric) {
+      return aPart.isNumeric ? -1 : 1;
+    }
+
+    const diff = aPart.value.localeCompare(bPart.value);
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+
+  return 0;
+}
+
 function storageAvailable() {
   try {
     return typeof window !== 'undefined' && 'localStorage' in window && window.localStorage !== null;
@@ -380,7 +425,7 @@ async function loadScenes() {
       }
     }
 
-    loadedScenes.sort((a, b) => a.id.localeCompare(b.id));
+    loadedScenes.sort((a, b) => compareSceneIds(a.id, b.id));
     state.scenes = loadedScenes;
 
     if (!loadedScenes.some((scene) => scene.id === state.selectedSceneId)) {
@@ -404,7 +449,7 @@ async function discoverSceneFiles() {
         const files = data.files
           .filter((file) => typeof file === 'string' && file.endsWith('.json'))
           .filter((file) => !file.endsWith('scene-index.json'))
-          .sort((a, b) => a.localeCompare(b));
+          .sort((a, b) => compareSceneIds(a.replace(/\.json$/i, ''), b.replace(/\.json$/i, '')));
 
         if (files.length > 0) {
           return files;
@@ -439,7 +484,9 @@ async function discoverSceneFiles() {
           .filter(Boolean);
 
         if (files.length > 0) {
-          return Array.from(new Set(files)).sort((a, b) => a.localeCompare(b));
+          return Array.from(new Set(files)).sort((a, b) =>
+            compareSceneIds(a.replace(/\.json$/i, ''), b.replace(/\.json$/i, ''))
+          );
         }
       }
     }
@@ -516,7 +563,8 @@ function toggleNavVisibility() {
 
 function renderReadingNav() {
   const nav = document.getElementById('readingNav');
-  const options = state.scenes
+  const options = [...state.scenes]
+    .sort((a, b) => compareSceneIds(a.id, b.id))
     .map((scene) => `<option value="${scene.id}" ${scene.id === state.selectedSceneId ? 'selected' : ''}>${scene.id}</option>`)
     .join('');
   let selectMarkup = options;
