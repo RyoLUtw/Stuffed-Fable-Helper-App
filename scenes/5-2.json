@@ -1,0 +1,80 @@
+{
+  "narrative": {
+    "title": "Scene 5-2 — Crawlies Revealed",
+    "paragraphs": [
+      "They push the door open. A frightening scene seems to reveal a room full of doll‑headed crawlies with many legs. They scuttle across the floor. A sharp gasp escapes from Stitch.",
+      "Theadora is the first to exclaim about the eerie light under the bed. The stuffies spread out and hold their ground as the glow flickers and the crawlies close in. The fight is about to begin."
+    ],
+    "vocabulary": [
+      {
+        "word": "frightening",
+        "definition": "Causing fear.",
+        "examples": [
+          "The sudden crash was frightening.",
+          "That mask looks frightening in the dark."
+        ]
+      },
+      {
+        "word": "reveal",
+        "definition": "To show something that was hidden or unknown.",
+        "examples": [
+          "Pulling the curtain will reveal the stage.",
+          "Tests reveal what we need to learn."
+        ]
+      },
+      {
+        "word": "gasp",
+        "definition": "To take a quick breath from surprise or fear.",
+        "examples": [
+          "They gasp as the lights go out.",
+          "The crowd gasps at the trick."
+        ]
+      },
+      {
+        "word": "exclaim",
+        "definition": "To speak suddenly and loudly with strong feeling.",
+        "examples": [
+          "“I won!” she exclaims.",
+          "“Stop!” he exclaims when the ball rolls away."
+        ]
+      },
+      {
+        "word": "eerie",
+        "definition": "Strange in a way that feels scary.",
+        "examples": [
+          "An eerie whistle came from the trees.",
+          "The empty hall felt eerie."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The stuffies push open the bedroom door; a frightening scene seems to reveal the danger inside."
+      },
+      {
+        "type": "blank",
+        "text": "Doll‑headed, many‑legged creatures hurry around the floor."
+      },
+      {
+        "type": "blank",
+        "text": "“The crawlies have come early!” Stitch gasps."
+      },
+      {
+        "type": "blank",
+        "text": "“Look at that light!” Theadora exclaims, pointing at the eerie purple glow under the bed."
+      },
+      {
+        "type": "blank",
+        "text": "The setup places crawlies and stuffies on the board; the fight begins."
+      }
+    ],
+    "distractors": [
+      "Creatures with feathered wings hurry around the floor.",
+      "Stitch whispers calmly that the crawlies are late.",
+      "Theadora exclaims about the warm golden light under the bed."
+    ]
+  }
+}

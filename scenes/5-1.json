@@ -1,0 +1,136 @@
+{
+  "narrative": {
+    "title": "Scene 5-1 — Omen Under the Bed",
+    "paragraphs": [
+      "The stuffies slip off the bed and creep into the hall. Behind them, an ominous purple glow starts underneath the big girl bed. From the light, long, spidery legs reach into the room. The sight makes them freeze.",
+      "They hurry back and get ready. They check their things and stand close together. The glow grows and fades like breathing. The stuffies keep still and wait for what will come next."
+    ],
+    "vocabulary": [
+      {
+        "word": "ominous",
+        "definition": "Giving a feeling that something bad might happen.",
+        "examples": [
+          "The wind began to moan around the empty house.",
+          "He let out a moan when he stood up too fast."
+        ]
+      },
+      {
+        "word": "underneath",
+        "definition": "Directly below something.",
+        "examples": [
+          "The ball rolled under the couch.",
+          "Clouds rolled in before the storm."
+        ]
+      },
+      {
+        "word": "glow",
+        "definition": "A soft, steady light.",
+        "examples": [
+          "She appears to be tired today.",
+          "The door appears to be stuck."
+        ]
+      },
+      {
+        "word": "spidery",
+        "definition": "Thin and long like a spider’s legs.",
+        "examples": [
+          "Clothes lay in a heap on the chair.",
+          "We climbed a heap of leaves."
+        ]
+      },
+      {
+        "word": "farther",
+        "definition": "at a greater distance (physical space).",
+        "examples": [
+          "The lighthouse is farther down the coast.",
+          "Walk farther to find the trail sign."
+        ]
+      },
+      {
+        "word": "cruel",
+        "definition": "causing pain or not caring if others suffer.",
+        "examples": [
+          "A cruel joke made the child cry.",
+          "The desert sun can be cruel at noon."
+        ]
+      },
+      {
+        "word": "form",
+        "definition": "the shape or structure of something; or to create/shape something.",
+        "examples": [
+          "A dark form moved behind the curtain.",
+          "Ice crystals form on the window."
+        ]
+      },
+      {
+        "word": "figure out",
+        "definition": "to find an answer or understand something after thinking.",
+        "examples": [
+          "We need to figure out the code.",
+          "She figured out where the noise came from."
+        ]
+      },
+      {
+        "word": "mechanical",
+        "definition": "related to machines; done by or like a machine.",
+        "examples": [
+          "A mechanical arm lifted the boxes.",
+          "He gave a mechanical nod."
+        ]
+      },
+      {
+        "word": "lift",
+        "definition": "raise something higher.",
+        "examples": [
+          "Please lift the lid carefully.",
+          "Two people lifted the sofa."
+        ]
+      },
+      {
+        "word": "toss",
+        "definition": "throw something lightly or carelessly.",
+        "examples": [
+          "She tossed the keys to me.",
+          "He tossed the ball in the air."
+        ]
+      },
+      {
+        "word": "recognize",
+        "definition": "to know something because you have seen it before.",
+        "examples": [
+          "I recognized her voice at once.",
+          "They recognized the tune from the radio."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The stuffies slide off the bed and tiptoe out of the room."
+      },
+      {
+        "type": "blank",
+        "text": "As they explore the dark house, an ominous purple glow starts to form underneath the big girl bed."
+      },
+      {
+        "type": "blank",
+        "text": "From the light, long, spidery legs appear."
+      },
+      {
+        "type": "blank",
+        "text": "The book calls for everyone to gear up with certain item cards."
+      },
+      {
+        "type": "blank",
+        "text": "The story directs players onward to the next section."
+      }
+    ],
+    "distractors": [
+      "As they explore the dark house, a cheerful blue glow starts underneath the big girl bed.",
+      "From the light, short, stubby legs appear.",
+      "The book calls for everyone to gear up with Garden items."
+    ]
+  }
+}
