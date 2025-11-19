@@ -1,0 +1,107 @@
+{
+  "narrative": {
+    "title": "Inside the Hut",
+    "paragraphs": [
+      "The corn husk doll grumped loudly before finally letting them in. She swung the door wide, then slammed the hatch shut behind her and undid numerous locks. Inside, the room was cluttered with old furniture, various instruments, and at least one pile of books and curios stacked everywhere. The stuffies stepped carefully, unsure what they might find next."
+    ],
+    "vocabulary": [
+      {
+        "word": "grumped",
+        "definition": "Past tense of grump. Grump means to complain in an annoyed or grouchy way.",
+        "examples": [
+          "He grumped about the long line.",
+          "She grumped but still helped."
+        ]
+      },
+      {
+        "word": "slammed",
+        "definition": "Past tense of slam. Slam means to close something loudly and forcefully.",
+        "examples": [
+          "He slammed the door behind him.",
+          "She slammed the lid shut."
+        ]
+      },
+      {
+        "word": "numerous",
+        "definition": "A large number; many.",
+        "examples": [
+          "She had numerous books on her shelf.",
+          "They faced numerous challenges."
+        ]
+      },
+      {
+        "word": "swung",
+        "definition": "Past tense of swing. Swing means to move back and forth or to move something in a sweeping motion.",
+        "examples": [
+          "The monkey swung from the branches.",
+          "He swung the door open quickly."
+        ]
+      },
+      {
+        "word": "cluttered",
+        "definition": "Filled with too many things, making it messy.",
+        "examples": [
+          "The desk was cluttered with papers.",
+          "A cluttered room can feel overwhelming."
+        ]
+      },
+      {
+        "word": "furniture",
+        "definition": "Large items used in a room like chairs, tables, or beds.",
+        "examples": [
+          "The room had simple wooden furniture.",
+          "They moved the furniture to make space."
+        ]
+      },
+      {
+        "word": "various",
+        "definition": "Many different types.",
+        "examples": [
+          "The box held various tools.",
+          "She tried various snacks at the fair."
+        ]
+      },
+      {
+        "word": "instrument",
+        "definition": "A tool or device used for a specific purpose.",
+        "examples": [
+          "The scientist used several instruments to test the water.",
+          "The shop displayed musical instruments."
+        ]
+      },
+      {
+        "word": "pile",
+        "definition": "A group of things stacked or lying together.",
+        "examples": [
+          "A pile of clothes lay on the floor.",
+          "They built a pile of leaves to jump into."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The keeper of the hut opens the door after complaining."
+      },
+      {
+        "type": "blank",
+        "text": "She closes the entry again and unlocks several barriers."
+      },
+      {
+        "type": "blank",
+        "text": "The group steps into a crowded room filled with objects."
+      },
+      {
+        "type": "anchor",
+        "text": "They notice stacks of items and tools all around."
+      }
+    ],
+    "distractors": [
+      "The hut is perfectly clean and empty.",
+      "A singing choir fills the room.",
+      "The hut contains only a single chair."
+    ]
+  }
+}

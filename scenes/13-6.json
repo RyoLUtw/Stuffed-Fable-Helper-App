@@ -1,0 +1,51 @@
+{
+  "narrative": {
+    "title": "Ritual to Return Home",
+    "paragraphs": [
+      "Stitch gathered the stuffies close and told them the moment had come to return home. They formed a circle and held paws, steadying themselves. Together, they began to recite Marietta’s rhyme, trusting it would guide them safely back to their child."
+    ],
+    "vocabulary": [
+      {
+        "word": "paws",
+        "definition": "The feet of animals, often soft and padded.",
+        "examples": [
+          "The cat’s paws were muddy.",
+          "The puppy placed its paws on her knee."
+        ]
+      },
+      {
+        "word": "recite",
+        "definition": "To say something out loud from memory.",
+        "examples": [
+          "She recited the poem perfectly.",
+          "They recited the rhyme together."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "A member of the group announces it is time to leave this realm."
+      },
+      {
+        "type": "blank",
+        "text": "Everyone prepares by forming a circle."
+      },
+      {
+        "type": "blank",
+        "text": "They speak the guiding words together."
+      },
+      {
+        "type": "anchor",
+        "text": "Their joined gesture completes the ritual."
+      }
+    ],
+    "distractors": [
+      "The group prepares for a long climb instead.",
+      "A balloon appears to take them elsewhere.",
+      "A stranger offers to lead them home."
+    ]
+  }
+}

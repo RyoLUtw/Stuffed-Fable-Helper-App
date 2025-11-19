@@ -1,0 +1,59 @@
+{
+  "narrative": {
+    "title": "Explore: The Playhouse",
+    "paragraphs": [
+      "The stuffies wandered through the forest until they spotted a tiny playhouse sitting alone among the trees. Its frame looked broken-down and oddly shaped, as if it had been forgotten for a long time. They stepped closer for a careful inspection, hoping for a way inside. But when they tried the door, it proved to be locked and surprisingly sturdy. With no other choice, they prepared to move on."
+    ],
+    "vocabulary": [
+      {
+        "word": "inspection",
+        "definition": "The act of looking at something carefully to check it.",
+        "examples": [
+          "The bridge needed a safety inspection.",
+          "She made a quick inspection of the room."
+        ]
+      },
+      {
+        "word": "proved to",
+        "definition": "Showed to be true or real.",
+        "examples": [
+          "His plan proved to be helpful.",
+          "The map proved to be accurate."
+        ]
+      },
+      {
+        "word": "sturdy",
+        "definition": "Strong and unlikely to break.",
+        "examples": [
+          "The sturdy box held all the books.",
+          "They built a sturdy shelter for the night."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The group comes upon a small building hidden near the path."
+      },
+      {
+        "type": "blank",
+        "text": "Its shape looks uneven, as though time has worn it down."
+      },
+      {
+        "type": "blank",
+        "text": "They test the front entrance to see if it will open."
+      },
+      {
+        "type": "anchor",
+        "text": "The entrance cannot be moved and holds firm."
+      }
+    ],
+    "distractors": [
+      "The building has bright lights glowing from every window.",
+      "The door opens the moment they touch it.",
+      "A ladder leads easily to an open upper floor."
+    ]
+  }
+}

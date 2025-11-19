@@ -1,0 +1,67 @@
+{
+  "narrative": {
+    "title": "Password at the Door",
+    "paragraphs": [
+      "Thea begged for help as she pounded on the hidden door. A gruff voice from within demanded a password, ignoring the growing danger outside. Thea was sure the answer was not something simple like 'charity', but the corn husk guardian refused to open the sturdy door until they proved themselves. With no other options, the stuffies gathered together, trying to think of what to say before time ran out."
+    ],
+    "vocabulary": [
+      {
+        "word": "begged",
+        "definition": "Past tense of beg. Beg means to ask for something desperately.",
+        "examples": [
+          "She begged him not to leave.",
+          "The child begged for help."
+        ]
+      },
+      {
+        "word": "charity",
+        "definition": "Kind help given to someone in need.",
+        "examples": [
+          "They donated clothes to charity.",
+          "Showing charity can brighten someone’s day."
+        ]
+      },
+      {
+        "word": "corn husk",
+        "definition": "The dry, outer leaves of an ear of corn; can be used to make dolls or crafts.",
+        "examples": [
+          "The doll was made from corn husk.",
+          "She used corn husk to weave a small toy."
+        ]
+      },
+      {
+        "word": "demanded",
+        "definition": "Past tense of demand. Demand means to ask in a strong, forceful way.",
+        "examples": [
+          "He demanded an answer.",
+          "She demanded to know the truth."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The group calls for help at a shut entrance."
+      },
+      {
+        "type": "blank",
+        "text": "A voice inside asks for a specific reply before opening."
+      },
+      {
+        "type": "blank",
+        "text": "They work together to convince the speaker to let them in."
+      },
+      {
+        "type": "anchor",
+        "text": "Success would unlock the door and allow them inside."
+      }
+    ],
+    "distractors": [
+      "The door opens the moment they knock.",
+      "The voice warmly invites them in with no questions.",
+      "The house disappears before they reach it."
+    ]
+  }
+}
