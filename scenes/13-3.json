@@ -1,0 +1,91 @@
+{
+  "narrative": {
+    "title": "Trail to the Hut",
+    "paragraphs": [
+      "The stuffies sprinted down the trail, pushing aside thorny branches as they reach out again and again to clear a path. They soon stumbled into a small clearing and spotted an oddly shaped hut hidden among tangled roots. Before they could look closer, a haunting howl rolled through the trees, urging them forward."
+    ],
+    "vocabulary": [
+      {
+        "word": "sprinted",
+        "definition": "Past tense of sprint. Sprint means to run very fast for a short time.",
+        "examples": [
+          "She sprinted across the field to catch the ball.",
+          "He sprinted to the bus stop."
+        ]
+      },
+      {
+        "word": "reach out",
+        "definition": "To stretch your arm or hand toward something.",
+        "examples": [
+          "She tried to reach out and grab the rope.",
+          "He would reach out to help his friend stand."
+        ]
+      },
+      {
+        "word": "stumbled",
+        "definition": "Past tense of stumble. Stumble means to trip or nearly fall.",
+        "examples": [
+          "He stumbled on a loose stone.",
+          "She stumbled but caught herself."
+        ]
+      },
+      {
+        "word": "hut",
+        "definition": "A small, simple house or shelter.",
+        "examples": [
+          "The hut stood alone in the woods.",
+          "They found a warm hut to rest in."
+        ]
+      },
+      {
+        "word": "tangled",
+        "definition": "Twisted together in a messy or confusing way.",
+        "examples": [
+          "Her hair was tangled after the windy day.",
+          "The path was tangled with roots and vines."
+        ]
+      },
+      {
+        "word": "oddly",
+        "definition": "In a strange or unusual way.",
+        "examples": [
+          "The door was oddly warm to the touch.",
+          "She spoke oddly, as if unsure of herself."
+        ]
+      },
+      {
+        "word": "haunting",
+        "definition": "Staying in your mind in a sad or mysterious way.",
+        "examples": [
+          "The haunting melody stayed with him all night.",
+          "She remembered the haunting cry."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The group runs quickly down a rough forest path."
+      },
+      {
+        "type": "blank",
+        "text": "They try to clear the way as they move."
+      },
+      {
+        "type": "blank",
+        "text": "They enter a small open space and spot a strange building."
+      },
+      {
+        "type": "anchor",
+        "text": "A chilling sound echoes from somewhere nearby."
+      }
+    ],
+    "distractors": [
+      "They find a calm, sunny meadow.",
+      "A toy waves from a cozy cottage.",
+      "A smooth, paved road appears ahead."
+    ]
+  }
+}

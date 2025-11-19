@@ -1,0 +1,115 @@
+{
+  "narrative": {
+    "title": "Wounded Travelers",
+    "paragraphs": [
+      "Hidden among the trees, the stuffies spied dark shapes moving along the trail. They had expected enemies, but the figures appeared to be wounded travelers trying to drag their injured friends. A long, low howl rose from the distance, making the travelers shiver in fright as the sounds seemed to approach. One of them insisted they would never escape if they stopped now, and the danger felt closer with every step."
+    ],
+    "vocabulary": [
+      {
+        "word": "spied",
+        "definition": "Past tense of spy. Spy means to notice something hidden or hard to see.",
+        "examples": [
+          "She spied a small key under the table.",
+          "They spied movement in the dark."
+        ]
+      },
+      {
+        "word": "expected",
+        "definition": "Thought something would happen; believed it was likely.",
+        "examples": [
+          "He expected rain, so he brought an umbrella.",
+          "She expected the trip to take all day."
+        ]
+      },
+      {
+        "word": "appeared to",
+        "definition": "Seemed to be a certain way, though it might not be fully clear.",
+        "examples": [
+          "The bird appeared to be injured.",
+          "He appeared to understand the rules."
+        ]
+      },
+      {
+        "word": "drag",
+        "definition": "To pull something along the ground with effort.",
+        "examples": [
+          "They had to drag the heavy box inside.",
+          "She tried to drag the chair across the room."
+        ]
+      },
+      {
+        "word": "wounded",
+        "definition": "Hurt or injured, especially in the body.",
+        "examples": [
+          "The wounded bird could not fly.",
+          "Soldiers carried the wounded to safety."
+        ]
+      },
+      {
+        "word": "howl",
+        "definition": "A long, loud cry made by animals or wind.",
+        "examples": [
+          "A wolf’s howl echoed across the hills.",
+          "The wind let out a haunting howl."
+        ]
+      },
+      {
+        "word": "shiver",
+        "definition": "To shake slightly because you are cold, scared, or excited.",
+        "examples": [
+          "She began to shiver in the snow.",
+          "He shivered at the spooky story."
+        ]
+      },
+      {
+        "word": "fright",
+        "definition": "A sudden feeling of fear.",
+        "examples": [
+          "The loud noise gave her a fright.",
+          "He recovered quickly from the fright."
+        ]
+      },
+      {
+        "word": "insisted",
+        "definition": "Past tense of insist. Insist means to say something firmly and refuse to change your mind.",
+        "examples": [
+          "She insisted on helping despite being tired.",
+          "He insisted that they leave immediately."
+        ]
+      },
+      {
+        "word": "approach",
+        "definition": "To move closer to something or someone.",
+        "examples": [
+          "A small cat began to approach him.",
+          "They approached the gate carefully."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The group notices shadowy figures approaching on the path."
+      },
+      {
+        "type": "blank",
+        "text": "They realize these newcomers are injured and struggling."
+      },
+      {
+        "type": "blank",
+        "text": "A chilling cry echoes from behind them."
+      },
+      {
+        "type": "anchor",
+        "text": "The travelers tremble as the sound grows nearer."
+      }
+    ],
+    "distractors": [
+      "A lively parade marches toward them.",
+      "The travelers are celebrating with music.",
+      "The group sees dancers practicing in the road."
+    ]
+  }
+}

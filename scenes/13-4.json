@@ -1,0 +1,91 @@
+{
+  "narrative": {
+    "title": "Helping the Injured",
+    "paragraphs": [
+      "There was a sharp cry of shock as the travelers saw the stuffies drop from the trees above to join their company. Quickly, the stuffies urged everyone to move together, helping the wounded along. Step by step, the group managed to keep pace despite their severe injuries, pushing forward as the danger grew."
+    ],
+    "vocabulary": [
+      {
+        "word": "shock",
+        "definition": "A strong surprise that makes you react suddenly.",
+        "examples": [
+          "The news came as a shock to everyone.",
+          "She gasped in shock when the door slammed."
+        ]
+      },
+      {
+        "word": "company",
+        "definition": "The people you are with.",
+        "examples": [
+          "She enjoyed the company of her friends.",
+          "They were glad to have company on the long walk."
+        ]
+      },
+      {
+        "word": "urged",
+        "definition": "Past tense of urge. Urge means to strongly encourage someone to do something.",
+        "examples": [
+          "She urged him to hurry.",
+          "They urged the children to stay close."
+        ]
+      },
+      {
+        "word": "managed to",
+        "definition": "Succeeded in doing something difficult.",
+        "examples": [
+          "She managed to finish the puzzle.",
+          "They managed to lift the heavy box."
+        ]
+      },
+      {
+        "word": "pace",
+        "definition": "The speed at which someone or something moves.",
+        "examples": [
+          "They walked at a quick pace.",
+          "The runner kept a steady pace."
+        ]
+      },
+      {
+        "word": "severe",
+        "definition": "Very serious or intense.",
+        "examples": [
+          "The storm caused severe damage.",
+          "He suffered a severe injury."
+        ]
+      },
+      {
+        "word": "injuries",
+        "definition": "Hurts or damage done to the body.",
+        "examples": [
+          "The accident caused several injuries.",
+          "Nurses treated the injuries quickly."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The injured travelers react with surprise when the group arrives."
+      },
+      {
+        "type": "blank",
+        "text": "The group encourages everyone to move together."
+      },
+      {
+        "type": "blank",
+        "text": "Even the hurt travelers keep up as best they can."
+      },
+      {
+        "type": "anchor",
+        "text": "They all hurry along the path."
+      }
+    ],
+    "distractors": [
+      "The travelers decide it is safe enough to rest.",
+      "They stop for a long, peaceful meal.",
+      "A flock of birds shows them a shortcut."
+    ]
+  }
+}

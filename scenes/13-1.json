@@ -1,0 +1,91 @@
+{
+  "narrative": {
+    "title": "Into the Tangled Forest",
+    "paragraphs": [
+      "The stuffies stared into the tangled forest ahead, its shadows stretching deep into the depths of the trees. Strange, mysterious voices rose in an echo, coming toward them from somewhere far inside the forest. No one could tell what the sounds meant. They whispered urgently to one another, unsure whether to hide or set off down the path. Every moment felt important now, and they knew time was running short."
+    ],
+    "vocabulary": [
+      {
+        "word": "stared",
+        "definition": "Looked at something for a long time, often because it is surprising or confusing.",
+        "examples": [
+          "She stared at the huge tree in disbelief.",
+          "He stared at the door, unsure whether to open it."
+        ]
+      },
+      {
+        "word": "tangled",
+        "definition": "Twisted together in a messy or confusing way.",
+        "examples": [
+          "Her hair was tangled after the windy day.",
+          "The path was tangled with roots and vines."
+        ]
+      },
+      {
+        "word": "depths",
+        "definition": "The deepest or farthest parts of something, often dark or hard to reach.",
+        "examples": [
+          "Strange sounds came from the depths of the cave.",
+          "He felt nervous walking into the depths of the forest."
+        ]
+      },
+      {
+        "word": "echo",
+        "definition": "A sound that bounces off a surface and repeats.",
+        "examples": [
+          "Their voices made a soft echo in the empty hall.",
+          "The cave echoed with dripping water."
+        ]
+      },
+      {
+        "word": "set off",
+        "definition": "To begin a journey or cause something to start happening.",
+        "examples": [
+          "They set off toward the mountains before sunrise.",
+          "The alarm set off a loud ringing through the house."
+        ]
+      },
+      {
+        "word": "mysterious",
+        "definition": "Difficult to understand or explain; full of secrets.",
+        "examples": [
+          "A mysterious light glowed behind the trees.",
+          "The box held a mysterious object inside."
+        ]
+      },
+      {
+        "word": "running short",
+        "definition": "Having less and less of something; not much time or supplies left.",
+        "examples": [
+          "We are running short on time.",
+          "They hurried because daylight was running short."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The group pauses at the edge of a dark forest."
+      },
+      {
+        "type": "blank",
+        "text": "Distant sounds drift toward them from deep within."
+      },
+      {
+        "type": "blank",
+        "text": "They quietly discuss the safest thing to do next."
+      },
+      {
+        "type": "anchor",
+        "text": "They sense they cannot delay for long."
+      }
+    ],
+    "distractors": [
+      "The forest is full of cheerful music.",
+      "Bright lamps light the path clearly.",
+      "A friendly guide waits beside the trees."
+    ]
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "narrative": {
+    "title": "Explore: Marietta's Warning",
+    "paragraphs": [
+      "Inside the dim hut, an old corn husk doll named Marietta patted a tiny mouse on her lap and studied the stuffies with a careful posture. She examined their fabric, noticing how fresh and clean it was, and it was obvious to her that they did not belong in this place. When the stuffies confessed they were desperate to return home, Marietta nodded slowly and explained the truth: each of them carried a plastic heart made by the Great Manufacturer, but those hearts were emptied the moment they entered this realm. To leave, they would need to perform good deeds to refill them. She also warned that the dark one who ruled this place was bound to sense any change, and if he did, he would hunt their child. At last, Marietta taught them a secret rhyme and guided them toward the next step, depending on whether they carried the blanket."
+    ],
+    "vocabulary": [
+      {
+        "word": "patted",
+        "definition": "Past tense of pat. Pat means to touch lightly with your hand, usually to comfort or show affection.",
+        "examples": [
+          "She patted the dog’s head.",
+          "He patted the dust off his coat."
+        ]
+      },
+      {
+        "word": "posture",
+        "definition": "The way someone stands or sits.",
+        "examples": [
+          "Her posture made her look confident.",
+          "He corrected his posture during the lesson."
+        ]
+      },
+      {
+        "word": "fabric",
+        "definition": "Material made from thread, used to make clothes or toys.",
+        "examples": [
+          "Her dress was made of soft fabric.",
+          "The toy’s fabric felt worn."
+        ]
+      },
+      {
+        "word": "obvious",
+        "definition": "Easy to see or understand.",
+        "examples": [
+          "It was obvious that he was tired.",
+          "The answer became obvious after a moment."
+        ]
+      },
+      {
+        "word": "nodded",
+        "definition": "Past tense of nod. Nod means to move your head up and down to show yes.",
+        "examples": [
+          "She nodded in agreement.",
+          "He nodded to signal it was safe."
+        ]
+      },
+      {
+        "word": "manufacturer",
+        "definition": "A company or person who makes products.",
+        "examples": [
+          "The manufacturer tested every toy.",
+          "This phone was made by a famous manufacturer."
+        ]
+      },
+      {
+        "word": "perform",
+        "definition": "To carry out an action or task.",
+        "examples": [
+          "She will perform the song tonight.",
+          "They performed a quick test."
+        ]
+      },
+      {
+        "word": "deeds",
+        "definition": "Actions, especially those that show character.",
+        "examples": [
+          "Kind deeds can change someone’s day.",
+          "His brave deeds were remembered."
+        ]
+      },
+      {
+        "word": "bound to",
+        "definition": "Connected to something so that it is very likely or certain to happen.",
+        "examples": [
+          "They felt bound to protect the child.",
+          "If you practice every day, you are bound to improve."
+        ]
+      },
+      {
+        "word": "rhyme",
+        "definition": "A short poem or set of lines with repeating sounds.",
+        "examples": [
+          "She taught the children a simple rhyme.",
+          "The old rhyme was easy to remember."
+        ]
+      },
+      {
+        "word": "confess",
+        "definition": "To admit something honestly.",
+        "examples": [
+          "He confessed he was afraid.",
+          "She confessed her mistake."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The group meets a careful, older doll who examines them closely."
+      },
+      {
+        "type": "blank",
+        "text": "She realizes something unusual happened when they arrived."
+      },
+      {
+        "type": "blank",
+        "text": "They explain that they urgently need help finding their way back."
+      },
+      {
+        "type": "anchor",
+        "text": "She reveals that their inner cores lost their strength upon arrival."
+      },
+      {
+        "type": "blank",
+        "text": "She warns about a powerful ruler who reacts harshly to change."
+      },
+      {
+        "type": "blank",
+        "text": "She teaches a special verse meant to guide their return."
+      },
+      {
+        "type": "anchor",
+        "text": "She sends them to different destinations depending on the item they carry."
+      }
+    ],
+    "distractors": [
+      "She tells them their only choice is to stay forever.",
+      "She refuses to speak and pushes them out of her hut.",
+      "She claims their return requires destroying their inner cores."
+    ]
+  }
+}
