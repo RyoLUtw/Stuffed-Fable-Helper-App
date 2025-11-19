@@ -105,6 +105,7 @@ const state = {
   showGameStatus: false,
   teacherScenePromptShown: false,
   pendingSceneChange: null,
+  pendingSceneStatusTarget: null,
   googleAuth: {
     connected: false,
     message: 'Not connected',
@@ -895,28 +896,35 @@ function setupTeacherControls() {
   const startedButton = document.getElementById('markSceneStarted');
   if (startedButton) {
     startedButton.addEventListener('click', () => {
-      const targetScene = state.pendingSceneChange ?? state.selectedSceneId;
-      setTeacherSceneStatus('started', targetScene);
+      const targetScene = state.pendingSceneStatusTarget ?? state.selectedSceneId;
+      const destinationScene = state.pendingSceneChange ?? state.selectedSceneId;
+      if (targetScene) {
+        setTeacherSceneStatus('started', targetScene);
+      }
       closeModal('sceneStatusModal');
-      applySceneChange(targetScene);
+      applySceneChange(destinationScene);
     });
   }
 
   const finishedButton = document.getElementById('markSceneFinished');
   if (finishedButton) {
     finishedButton.addEventListener('click', () => {
-      const targetScene = state.pendingSceneChange ?? state.selectedSceneId;
-      setTeacherSceneStatus('finished', targetScene);
+      const targetScene = state.pendingSceneStatusTarget ?? state.selectedSceneId;
+      const destinationScene = state.pendingSceneChange ?? state.selectedSceneId;
+      if (targetScene) {
+        setTeacherSceneStatus('finished', targetScene);
+      }
       closeModal('sceneStatusModal');
-      applySceneChange(targetScene);
+      applySceneChange(destinationScene);
     });
   }
 
   const skipButton = document.getElementById('skipSceneStatus');
   if (skipButton) {
     skipButton.addEventListener('click', () => {
+      const destinationScene = state.pendingSceneChange ?? state.selectedSceneId;
       closeModal('sceneStatusModal');
-      applySceneChange(state.pendingSceneChange ?? state.selectedSceneId);
+      applySceneChange(destinationScene);
     });
   }
 
@@ -1345,7 +1353,7 @@ function createSessionCard(session) {
 
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
-  deleteButton.className = 'secondary-button danger';
+  deleteButton.className = 'secondary-button danger session-delete-button';
   deleteButton.textContent = 'Delete';
   deleteButton.addEventListener('click', () => {
     const confirmed = window.confirm(`Delete "${session.name}"? This action cannot be undone.`);
@@ -1612,14 +1620,20 @@ function handleDownloadConfirm() {
   downloadSelectedSessions(ids);
 }
 
-function requestSceneStatusUpdate(sceneId) {
-  if (!sceneId) {
+function requestSceneStatusUpdate(nextSceneId) {
+  if (!nextSceneId) {
     return;
   }
-  state.pendingSceneChange = sceneId;
+  const currentSceneId = state.selectedSceneId;
+  state.pendingSceneChange = nextSceneId;
+  state.pendingSceneStatusTarget = currentSceneId;
   const message = document.getElementById('sceneStatusMessage');
   if (message) {
-    message.textContent = `Update progress for ${sceneId}?`;
+    if (currentSceneId) {
+      message.textContent = `Update progress for ${currentSceneId}?`;
+    } else {
+      message.textContent = 'Update progress before continuing?';
+    }
   }
   openModal('sceneStatusModal');
 }
@@ -2663,6 +2677,7 @@ function closeModal(id) {
     }
     if (id === 'sceneStatusModal') {
       state.pendingSceneChange = null;
+      state.pendingSceneStatusTarget = null;
     }
     if (id === 'scenePromptModal') {
       state.teacherScenePromptShown = true;
