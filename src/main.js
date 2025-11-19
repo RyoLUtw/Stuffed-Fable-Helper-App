@@ -1,3 +1,7 @@
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
+const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
+const GOOGLE_APP_ID = 'YOUR_GOOGLE_APP_ID';
+
 const CHARACTER_NAMES = ['Lumpy', 'Flops', 'Theadora', 'Stitch', 'Piggle', 'Lionel'];
 const DIE_OPTIONS = [
   { value: 'green', color: '#34d399' },
@@ -28,6 +32,7 @@ const STATUS_OPTIONS = [
 const STORAGE_KEYS = {
   gameplay: 'stuffed-fable/gameplay',
   timelinePrefix: 'stuffed-fable/timeline/',
+  teacherSessions: 'stuffed-fable/teacher/sessions',
 };
 
 function createEmptyItemSlots() {
@@ -76,6 +81,10 @@ function createDefaultCharacter(label, name) {
 }
 
 const state = {
+  role: null,
+  teacherView: 'home',
+  selectedTeacherSessionId: null,
+  teacherSessions: [],
   mode: 'reading',
   readingTab: 'narrative',
   scenes: [],
@@ -93,6 +102,16 @@ const state = {
     createDefaultCharacter('Character 2', 'Flops'),
   ],
   activeCharacterIndex: 0,
+  showGameStatus: false,
+  teacherScenePromptShown: false,
+  pendingSceneChange: null,
+  googleAuth: {
+    connected: false,
+    message: 'Not connected',
+  },
+  activeSleepCardId: null,
+  pendingSleepStatus: 'sleeping',
+  activeLostCardId: null,
 };
 
 const app = document.getElementById('app');
@@ -393,6 +412,14 @@ function hydrateGameplayState() {
 }
 
 function saveGameplayProgress() {
+  if (state.role === 'teacher' && state.teacherView === 'session') {
+    updateActiveTeacherSession((session) => {
+      session.gameplay = getGameplaySnapshot();
+      return session;
+    });
+    return;
+  }
+
   if (!storageAvailable()) {
     return;
   }
@@ -424,6 +451,17 @@ function getGameplaySnapshot() {
   };
 }
 
+function getDefaultGameplaySnapshot() {
+  return {
+    version: 1,
+    activeCharacterIndex: 0,
+    characters: [
+      createDefaultCharacter('Character 1', 'Lumpy'),
+      createDefaultCharacter('Character 2', 'Flops'),
+    ],
+  };
+}
+
 function downloadGameplayBackup() {
   const payload = {
     exportedAt: new Date().toISOString(),
@@ -450,16 +488,125 @@ function extractGameplayData(raw) {
   return raw;
 }
 
+function loadTeacherSessions() {
+  if (!storageAvailable()) {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.teacherSessions);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.map((entry) => sanitizeTeacherSession(entry)).filter(Boolean);
+  } catch (error) {
+    console.warn('Unable to load teacher sessions.', error);
+    return [];
+  }
+}
+
+function sanitizeTeacherSession(entry) {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+
+  const now = Date.now();
+  return {
+    id: typeof entry.id === 'string' ? entry.id : `session-${now}`,
+    name: typeof entry.name === 'string' && entry.name.trim() ? entry.name.trim() : 'Untitled Session',
+    createdAt: Number.isFinite(entry.createdAt) ? entry.createdAt : now,
+    updatedAt: Number.isFinite(entry.updatedAt) ? entry.updatedAt : now,
+    gameplay: entry.gameplay && typeof entry.gameplay === 'object' ? entry.gameplay : getDefaultGameplaySnapshot(),
+    sceneProgress: entry.sceneProgress && typeof entry.sceneProgress === 'object' ? { ...entry.sceneProgress } : {},
+    sleepCards: Array.isArray(entry.sleepCards) ? entry.sleepCards.map(sanitizeSleepCard).filter(Boolean) : [],
+    lostCards: Array.isArray(entry.lostCards) ? entry.lostCards.map(sanitizeLostCard).filter(Boolean) : [],
+  };
+}
+
+function sanitizeSleepCard(card) {
+  if (!card || typeof card !== 'object') {
+    return null;
+  }
+  const validStatuses = ['sleeping', 'restless', 'waking'];
+  const status = validStatuses.includes(card.status) ? card.status : 'sleeping';
+  return {
+    id: typeof card.id === 'string' ? card.id : `sleep-${Date.now()}`,
+    status,
+  };
+}
+
+function sanitizeLostCard(card) {
+  if (!card || typeof card !== 'object') {
+    return null;
+  }
+  return {
+    id: typeof card.id === 'string' ? card.id : `lost-${Date.now()}`,
+    name: typeof card.name === 'string' ? card.name : '',
+  };
+}
+
+function persistTeacherSessions() {
+  if (!storageAvailable()) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(STORAGE_KEYS.teacherSessions, JSON.stringify(state.teacherSessions));
+  } catch (error) {
+    console.warn('Unable to save teacher sessions.', error);
+  }
+}
+
+function createTeacherSession(name) {
+  const now = Date.now();
+  return {
+    id: `session-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    name: name?.trim() || `Session ${state.teacherSessions.length + 1}`,
+    createdAt: now,
+    updatedAt: now,
+    gameplay: getDefaultGameplaySnapshot(),
+    sceneProgress: {},
+    sleepCards: [],
+    lostCards: [],
+  };
+}
+
+function getActiveTeacherSession() {
+  if (!state.selectedTeacherSessionId) {
+    return null;
+  }
+  return state.teacherSessions.find((session) => session.id === state.selectedTeacherSessionId) ?? null;
+}
+
+function updateActiveTeacherSession(updater) {
+  const session = getActiveTeacherSession();
+  if (!session) {
+    return;
+  }
+  const next = updater(session);
+  if (next && next !== session) {
+    const index = state.teacherSessions.findIndex((item) => item.id === session.id);
+    if (index >= 0) {
+      state.teacherSessions[index] = next;
+    }
+  }
+  session.updatedAt = Date.now();
+  persistTeacherSessions();
+}
+
 function hydrateFromStorage() {
   hydrateGameplayState();
+  state.teacherSessions = loadTeacherSessions();
 }
 
 async function init() {
   renderBaseLayout();
+  setupTeacherControls();
   hydrateFromStorage();
-  renderModeToggle();
-  renderReadingNav();
-  renderGameplayNav();
   await loadScenes();
 
   if (state.scenes.length > 0) {
@@ -469,7 +616,9 @@ async function init() {
     prepareScene(null);
   }
 
+  renderModeToggle();
   renderReadingNav();
+  renderGameplayNav();
   renderContent();
 }
 
@@ -595,13 +744,98 @@ function renderBaseLayout() {
         <div id="timelineOptions" class="timeline-modal-options"></div>
       </div>
     </div>
+    <div id="sessionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal-content teacher-modal">
+        <button class="modal-close" data-close-target="sessionModal" aria-label="Close session modal">✕</button>
+        <h3>Create a New Session</h3>
+        <label class="modal-label" for="sessionNameInput">Session Name</label>
+        <input id="sessionNameInput" type="text" class="modal-input" placeholder="Enter a name" />
+        <div class="modal-actions">
+          <button type="button" class="secondary-button" data-close-target="sessionModal">Cancel</button>
+          <button id="sessionCreateButton" type="button" class="secondary-button primary">Create Session</button>
+        </div>
+      </div>
+    </div>
+    <div id="downloadModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal-content teacher-modal">
+        <button class="modal-close" data-close-target="downloadModal" aria-label="Close download modal">✕</button>
+        <h3>Download Saved Progress</h3>
+        <p>Select the sessions you want to export.</p>
+        <div class="download-toolbar">
+          <button type="button" id="selectAllSessions" class="secondary-button">Select all</button>
+          <button type="button" id="clearAllSessions" class="secondary-button">Deselect all</button>
+        </div>
+        <div id="downloadSessionList" class="session-checkbox-list"></div>
+        <div class="modal-actions">
+          <button type="button" class="secondary-button" data-close-target="downloadModal">Cancel</button>
+          <button id="driveBackupButton" type="button" class="secondary-button secondary">Back up to Drive</button>
+          <button id="downloadSessionsButton" type="button" class="secondary-button primary">Download</button>
+        </div>
+      </div>
+    </div>
+    <div id="sceneStatusModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal-content teacher-modal">
+        <button class="modal-close" data-close-target="sceneStatusModal" aria-label="Close scene status">✕</button>
+        <h3>Update Scene Progress</h3>
+        <p id="sceneStatusMessage"></p>
+        <div class="modal-actions">
+          <button id="markSceneStarted" type="button" class="secondary-button">Mark Started</button>
+          <button id="markSceneFinished" type="button" class="secondary-button">Mark Finished</button>
+          <button id="skipSceneStatus" type="button" class="secondary-button">Don't change</button>
+        </div>
+      </div>
+    </div>
+    <div id="scenePromptModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal-content teacher-modal">
+        <button class="modal-close" data-close-target="scenePromptModal" aria-label="Close scene prompt">✕</button>
+        <h3>Resume Story Progress</h3>
+        <p id="scenePromptMessage"></p>
+        <div class="modal-actions" id="scenePromptActions"></div>
+      </div>
+    </div>
+    <div id="sleepCardModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal-content teacher-modal">
+        <button class="modal-close" data-close-target="sleepCardModal" aria-label="Close sleep card modal">✕</button>
+        <h3 id="sleepCardModalTitle">Sleep Card</h3>
+        <div class="sleep-status-options">
+          ${['sleeping', 'restless', 'waking']
+            .map((status) => `<button type="button" class="status-chip" data-status="${status}">${status}</button>`)
+            .join('')}
+        </div>
+        <div class="modal-actions">
+          <button id="sleepCardDelete" type="button" class="secondary-button">Delete</button>
+          <button id="sleepCardSave" type="button" class="secondary-button primary">Save</button>
+        </div>
+      </div>
+    </div>
+    <div id="lostCardModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal-content teacher-modal">
+        <button class="modal-close" data-close-target="lostCardModal" aria-label="Close lost card modal">✕</button>
+        <h3 id="lostCardModalTitle">Lost Card</h3>
+        <label class="modal-label" for="lostCardInput">Card Name</label>
+        <input id="lostCardInput" type="text" class="modal-input" />
+        <div class="modal-actions">
+          <button id="lostCardDelete" type="button" class="secondary-button">Delete</button>
+          <button id="lostCardSave" type="button" class="secondary-button primary">Save</button>
+        </div>
+      </div>
+    </div>
   `;
 
   app.querySelectorAll('.modal-close').forEach((button) => {
     button.addEventListener('click', () => closeModal(button.dataset.closeTarget));
   });
 
-  ['vocabModal', 'timelineModal'].forEach((id) => {
+  [
+    'vocabModal',
+    'timelineModal',
+    'sessionModal',
+    'downloadModal',
+    'sceneStatusModal',
+    'scenePromptModal',
+    'sleepCardModal',
+    'lostCardModal',
+  ].forEach((id) => {
     const modal = document.getElementById(id);
     modal.addEventListener('click', (event) => {
       if (event.target === modal) {
@@ -611,8 +845,113 @@ function renderBaseLayout() {
   });
 }
 
+function setupTeacherControls() {
+  const createButton = document.getElementById('sessionCreateButton');
+  if (createButton) {
+    createButton.addEventListener('click', handleCreateSession);
+  }
+  const nameInput = document.getElementById('sessionNameInput');
+  if (nameInput) {
+    nameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleCreateSession();
+      }
+    });
+  }
+
+  const selectAll = document.getElementById('selectAllSessions');
+  if (selectAll) {
+    selectAll.addEventListener('click', selectAllDownloadSessions);
+  }
+  const clearAll = document.getElementById('clearAllSessions');
+  if (clearAll) {
+    clearAll.addEventListener('click', clearAllDownloadSessions);
+  }
+  const downloadButton = document.getElementById('downloadSessionsButton');
+  if (downloadButton) {
+    downloadButton.addEventListener('click', handleDownloadConfirm);
+  }
+  const driveButton = document.getElementById('driveBackupButton');
+  if (driveButton) {
+    driveButton.addEventListener('click', handleDriveBackup);
+  }
+
+  const startedButton = document.getElementById('markSceneStarted');
+  if (startedButton) {
+    startedButton.addEventListener('click', () => {
+      const targetScene = state.pendingSceneChange ?? state.selectedSceneId;
+      setTeacherSceneStatus('started', targetScene);
+      closeModal('sceneStatusModal');
+      applySceneChange(targetScene);
+    });
+  }
+
+  const finishedButton = document.getElementById('markSceneFinished');
+  if (finishedButton) {
+    finishedButton.addEventListener('click', () => {
+      const targetScene = state.pendingSceneChange ?? state.selectedSceneId;
+      setTeacherSceneStatus('finished', targetScene);
+      closeModal('sceneStatusModal');
+      applySceneChange(targetScene);
+    });
+  }
+
+  const skipButton = document.getElementById('skipSceneStatus');
+  if (skipButton) {
+    skipButton.addEventListener('click', () => {
+      closeModal('sceneStatusModal');
+      applySceneChange(state.pendingSceneChange ?? state.selectedSceneId);
+    });
+  }
+
+  document.querySelectorAll('#sleepCardModal .status-chip').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.pendingSleepStatus = button.dataset.status;
+      syncSleepStatusButtons();
+    });
+  });
+
+  const sleepSave = document.getElementById('sleepCardSave');
+  if (sleepSave) {
+    sleepSave.addEventListener('click', handleSleepCardSave);
+  }
+  const sleepDelete = document.getElementById('sleepCardDelete');
+  if (sleepDelete) {
+    sleepDelete.addEventListener('click', () => {
+      if (state.activeSleepCardId) {
+        handleSleepCardDelete();
+      } else {
+        closeModal('sleepCardModal');
+      }
+    });
+  }
+
+  const lostSave = document.getElementById('lostCardSave');
+  if (lostSave) {
+    lostSave.addEventListener('click', handleLostCardSave);
+  }
+  const lostDelete = document.getElementById('lostCardDelete');
+  if (lostDelete) {
+    lostDelete.addEventListener('click', () => {
+      if (state.activeLostCardId) {
+        handleLostCardDelete();
+      } else {
+        closeModal('lostCardModal');
+      }
+    });
+  }
+}
+
 function renderModeToggle() {
   const button = document.getElementById('modeToggle');
+  if (!state.role || (state.role === 'teacher' && state.teacherView === 'home')) {
+    button.classList.add('hidden');
+    button.onclick = null;
+    return;
+  }
+
+  button.classList.remove('hidden');
   button.textContent = state.mode === 'reading' ? 'Switch to Gameplay Mode' : 'Switch to Reading Mode';
   button.onclick = () => {
     state.mode = state.mode === 'reading' ? 'gameplay' : 'reading';
@@ -626,6 +965,12 @@ function renderModeToggle() {
 function toggleNavVisibility() {
   const readingNav = document.getElementById('readingNav');
   const gameplayNav = document.getElementById('gameplayNav');
+  if (!state.role || (state.role === 'teacher' && state.teacherView === 'home')) {
+    readingNav.classList.add('hidden');
+    gameplayNav.classList.add('hidden');
+    return;
+  }
+
   if (state.mode === 'reading') {
     readingNav.classList.remove('hidden');
     gameplayNav.classList.add('hidden');
@@ -637,9 +982,21 @@ function toggleNavVisibility() {
 
 function renderReadingNav() {
   const nav = document.getElementById('readingNav');
+  if (!state.role || (state.role === 'teacher' && state.teacherView === 'home')) {
+    nav.innerHTML = '';
+    return;
+  }
+
+  const isTeacherSession = state.role === 'teacher' && state.teacherView === 'session';
+  const session = isTeacherSession ? getActiveTeacherSession() : null;
+  const progressMap = session?.sceneProgress ?? {};
   const options = [...state.scenes]
     .sort((a, b) => compareSceneIds(a.id, b.id))
-    .map((scene) => `<option value="${scene.id}" ${scene.id === state.selectedSceneId ? 'selected' : ''}>${scene.id}</option>`)
+    .map((scene) => {
+      const status = progressMap[scene.id];
+      const symbol = status === 'finished' ? ' ✓' : status === 'started' ? ' …' : '';
+      return `<option value="${scene.id}" ${scene.id === state.selectedSceneId ? 'selected' : ''}>${scene.id}${symbol}</option>`;
+    })
     .join('');
   let selectMarkup = options;
 
@@ -667,6 +1024,11 @@ function renderReadingNav() {
   if (select) {
     select.addEventListener('change', (event) => {
       const nextSceneId = event.target.value;
+      if (isTeacherSession) {
+        event.target.value = state.selectedSceneId;
+        requestSceneStatusUpdate(nextSceneId);
+        return;
+      }
       state.selectedSceneId = nextSceneId;
       prepareScene(nextSceneId);
       renderContent();
@@ -684,13 +1046,24 @@ function renderReadingNav() {
 
 function renderGameplayNav() {
   const nav = document.getElementById('gameplayNav');
+  if (!state.role || (state.role === 'teacher' && state.teacherView === 'home')) {
+    nav.innerHTML = '';
+    return;
+  }
+
+  const isTeacherSession = state.role === 'teacher' && state.teacherView === 'session';
   nav.innerHTML = `
     <span class="nav-title">Gameplay Mode</span>
     <div class="tab-group" role="tablist">
+      ${
+        isTeacherSession
+          ? `<button class="tab-button ${state.showGameStatus ? 'active' : ''}" data-status-tab="status" type="button">Game Status</button>`
+          : ''
+      }
       ${state.characters
         .map(
           (character, index) => `
-            <button class="tab-button ${state.activeCharacterIndex === index ? 'active' : ''}" data-character-index="${index}" type="button">
+            <button class="tab-button ${!state.showGameStatus && state.activeCharacterIndex === index ? 'active' : ''}" data-character-index="${index}" type="button">
               ${character.label} (${character.name})
             </button>
           `
@@ -699,14 +1072,24 @@ function renderGameplayNav() {
     </div>
   `;
 
-  nav.querySelectorAll('.tab-button').forEach((button) => {
+  nav.querySelectorAll('button[data-character-index]').forEach((button) => {
     button.addEventListener('click', () => {
+      state.showGameStatus = false;
       state.activeCharacterIndex = Number(button.dataset.characterIndex);
       saveGameplayProgress();
       renderGameplayNav();
       renderContent();
     });
   });
+
+  const statusButton = nav.querySelector('button[data-status-tab]');
+  if (statusButton) {
+    statusButton.addEventListener('click', () => {
+      state.showGameStatus = true;
+      renderGameplayNav();
+      renderContent();
+    });
+  }
 }
 
 function prepareScene(sceneId) {
@@ -789,11 +1172,975 @@ function renderContent() {
   const container = document.getElementById('content');
   container.innerHTML = '';
 
+  if (!state.role) {
+    renderRoleSelection(container);
+    return;
+  }
+
+  if (state.role === 'teacher' && state.teacherView === 'home') {
+    renderTeacherHome(container);
+    return;
+  }
+
+  if (state.role === 'teacher' && state.teacherView === 'session') {
+    container.appendChild(createTeacherSessionBanner());
+  }
+
   if (state.mode === 'reading') {
     renderReadingContent(container);
   } else {
-    renderGameplayContent(container);
+    if (state.role === 'teacher' && state.teacherView === 'session' && state.showGameStatus) {
+      renderTeacherGameStatus(container);
+    } else {
+      renderGameplayContent(container);
+    }
   }
+}
+
+function renderRoleSelection(container) {
+  const card = document.createElement('section');
+  card.className = 'card role-card';
+  card.innerHTML = `
+    <h2>Who is using the app today?</h2>
+    <p class="muted-text">Choose the experience that matches your role.</p>
+    <div class="role-actions">
+      <button type="button" class="role-button" data-role="student">I'm a Student</button>
+      <button type="button" class="role-button secondary" data-role="teacher">I'm a Teacher</button>
+    </div>
+  `;
+  container.appendChild(card);
+
+  card.querySelectorAll('.role-button').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.dataset.role === 'student') {
+        enterStudentExperience();
+      } else {
+        enterTeacherExperience();
+      }
+    });
+  });
+}
+
+function enterStudentExperience() {
+  state.role = 'student';
+  state.teacherView = 'home';
+  state.showGameStatus = false;
+  state.mode = 'reading';
+  state.selectedTeacherSessionId = null;
+  renderModeToggle();
+  toggleNavVisibility();
+  renderReadingNav();
+  renderGameplayNav();
+  renderContent();
+}
+
+function enterTeacherExperience() {
+  state.role = 'teacher';
+  state.teacherView = 'home';
+  state.showGameStatus = false;
+  state.mode = 'reading';
+  state.selectedTeacherSessionId = null;
+  state.teacherScenePromptShown = false;
+  renderModeToggle();
+  toggleNavVisibility();
+  renderReadingNav();
+  renderGameplayNav();
+  renderContent();
+}
+
+function renderTeacherHome(container) {
+  const hero = document.createElement('section');
+  hero.className = 'card teacher-home-card';
+  hero.innerHTML = `
+    <h2>Teacher Control Room</h2>
+    <p class="muted-text">Manage classroom sessions, download backups, and keep the adventure on track.</p>
+  `;
+
+  const actions = document.createElement('div');
+  actions.className = 'teacher-actions';
+
+  const addButton = document.createElement('button');
+  addButton.type = 'button';
+  addButton.className = 'secondary-button primary';
+  addButton.textContent = 'Add session';
+  addButton.addEventListener('click', () => {
+    openNewSessionModal();
+  });
+
+  const downloadButton = document.createElement('button');
+  downloadButton.type = 'button';
+  downloadButton.className = 'secondary-button';
+  downloadButton.textContent = 'Download saved progress';
+  downloadButton.addEventListener('click', () => {
+    openDownloadModal();
+  });
+
+  const googleButton = document.createElement('button');
+  googleButton.type = 'button';
+  googleButton.className = 'secondary-button secondary';
+  googleButton.textContent = state.googleAuth.connected ? 'Google Connected' : 'Log in with Google';
+  googleButton.addEventListener('click', () => {
+    handleGoogleLogin();
+  });
+
+  const status = document.createElement('span');
+  status.className = 'muted-text';
+  status.textContent = state.googleAuth.message;
+
+  actions.append(addButton, downloadButton, googleButton, status);
+  hero.appendChild(actions);
+  container.appendChild(hero);
+
+  const sessionGrid = document.createElement('div');
+  sessionGrid.className = 'session-grid';
+
+  if (state.teacherSessions.length === 0) {
+    const emptyCard = document.createElement('div');
+    emptyCard.className = 'session-card empty';
+    emptyCard.innerHTML = '<p>No sessions yet. Create one to get started.</p>';
+    sessionGrid.appendChild(emptyCard);
+  } else {
+    const sorted = [...state.teacherSessions].sort((a, b) => b.updatedAt - a.updatedAt);
+    sorted.forEach((session) => {
+      sessionGrid.appendChild(createSessionCard(session));
+    });
+  }
+
+  container.appendChild(sessionGrid);
+}
+
+function createSessionCard(session) {
+  const card = document.createElement('article');
+  card.className = 'session-card';
+  const title = document.createElement('h3');
+  title.textContent = session.name;
+  const timestamp = document.createElement('p');
+  timestamp.className = 'muted-text';
+  timestamp.textContent = `Updated ${formatTimestamp(session.updatedAt)}`;
+
+  const buttonRow = document.createElement('div');
+  buttonRow.className = 'session-card-actions';
+  const openButton = document.createElement('button');
+  openButton.type = 'button';
+  openButton.className = 'secondary-button primary';
+  openButton.textContent = 'Open session';
+  openButton.addEventListener('click', () => {
+    enterTeacherSession(session.id);
+  });
+
+  buttonRow.appendChild(openButton);
+  card.append(title, timestamp, buttonRow);
+  return card;
+}
+
+function formatTimestamp(value) {
+  if (!Number.isFinite(value)) {
+    return 'just now';
+  }
+  try {
+    return new Date(value).toLocaleString();
+  } catch (error) {
+    return 'just now';
+  }
+}
+
+function createTeacherSessionBanner() {
+  const session = getActiveTeacherSession();
+  const card = document.createElement('section');
+  card.className = 'card teacher-banner';
+
+  if (!session) {
+    card.innerHTML = '<p>No session selected.</p>';
+    return card;
+  }
+
+  const title = document.createElement('h2');
+  title.textContent = session.name;
+  const meta = document.createElement('p');
+  meta.className = 'muted-text';
+  meta.textContent = `Last updated ${formatTimestamp(session.updatedAt)}`;
+
+  const actions = document.createElement('div');
+  actions.className = 'teacher-actions';
+
+  const homeButton = document.createElement('button');
+  homeButton.type = 'button';
+  homeButton.className = 'secondary-button';
+  homeButton.textContent = 'Back to home';
+  homeButton.addEventListener('click', () => {
+    exitTeacherSession();
+  });
+
+  const downloadButton = document.createElement('button');
+  downloadButton.type = 'button';
+  downloadButton.className = 'secondary-button secondary';
+  downloadButton.textContent = 'Download this session';
+  downloadButton.addEventListener('click', () => {
+    openDownloadModal([session.id]);
+  });
+
+  actions.append(homeButton, downloadButton);
+  card.append(title, meta, actions);
+  return card;
+}
+
+function enterTeacherSession(sessionId) {
+  state.selectedTeacherSessionId = sessionId;
+  state.teacherView = 'session';
+  state.mode = 'reading';
+  state.showGameStatus = false;
+  state.teacherScenePromptShown = false;
+
+  const session = getActiveTeacherSession();
+  if (!session) {
+    alert('Unable to load the selected session.');
+    exitTeacherSession();
+    return;
+  }
+  if (session?.gameplay) {
+    try {
+      applyGameplayState(session.gameplay);
+    } catch (error) {
+      console.warn('Unable to load gameplay for session.', error);
+      applyGameplayState(getDefaultGameplaySnapshot());
+    }
+  } else {
+    applyGameplayState(getDefaultGameplaySnapshot());
+  }
+
+  determineTeacherSceneSelection({ shouldPrompt: true });
+  renderModeToggle();
+  toggleNavVisibility();
+  renderReadingNav();
+  renderGameplayNav();
+  renderContent();
+}
+
+function exitTeacherSession() {
+  state.teacherView = 'home';
+  state.selectedTeacherSessionId = null;
+  state.mode = 'reading';
+  state.showGameStatus = false;
+  renderModeToggle();
+  toggleNavVisibility();
+  renderReadingNav();
+  renderGameplayNav();
+  renderContent();
+}
+
+function determineTeacherSceneSelection({ shouldPrompt = false } = {}) {
+  const session = getActiveTeacherSession();
+  if (!session) {
+    state.selectedSceneId = null;
+    return;
+  }
+
+  const sceneIds = state.scenes.map((scene) => scene.id);
+  if (sceneIds.length === 0) {
+    state.selectedSceneId = null;
+    return;
+  }
+
+  const progress = session.sceneProgress ?? {};
+  const inProgress = sceneIds.filter((id) => progress[id] === 'started');
+  if (inProgress.length > 0) {
+    const last = inProgress[inProgress.length - 1];
+    if (state.selectedSceneId !== last) {
+      state.selectedSceneId = last;
+      prepareScene(last);
+    }
+    state.teacherScenePromptShown = true;
+    return;
+  }
+
+  const finished = sceneIds.filter((id) => progress[id] === 'finished');
+  const lastFinished = finished[finished.length - 1] ?? null;
+  const nextId = lastFinished ? sceneIds[sceneIds.indexOf(lastFinished) + 1] ?? null : null;
+
+  if (lastFinished && state.selectedSceneId !== lastFinished) {
+    state.selectedSceneId = lastFinished;
+    prepareScene(lastFinished);
+  } else if (!lastFinished && state.selectedSceneId !== sceneIds[0]) {
+    state.selectedSceneId = sceneIds[0];
+    prepareScene(sceneIds[0]);
+  }
+
+  if (shouldPrompt && lastFinished && !state.teacherScenePromptShown) {
+    openScenePromptModal(lastFinished, nextId);
+    return;
+  }
+
+  if (!lastFinished && shouldPrompt) {
+    openScenePromptModal(null, sceneIds[0] ?? null);
+  }
+}
+
+function openNewSessionModal() {
+  const input = document.getElementById('sessionNameInput');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+  openModal('sessionModal');
+}
+
+function handleCreateSession() {
+  const input = document.getElementById('sessionNameInput');
+  const name = input?.value?.trim() ?? '';
+  const session = createTeacherSession(name);
+  state.teacherSessions = [...state.teacherSessions, session];
+  persistTeacherSessions();
+  closeModal('sessionModal');
+  renderContent();
+}
+
+function openDownloadModal(preselectedIds = []) {
+  populateDownloadModal(preselectedIds);
+  openModal('downloadModal');
+}
+
+function populateDownloadModal(preselectedIds = []) {
+  const list = document.getElementById('downloadSessionList');
+  if (!list) {
+    return;
+  }
+  list.innerHTML = '';
+  const idsToCheck = new Set(preselectedIds);
+  if (state.teacherSessions.length === 0) {
+    const message = document.createElement('p');
+    message.className = 'muted-text';
+    message.textContent = 'No saved sessions available.';
+    list.appendChild(message);
+  } else {
+    state.teacherSessions.forEach((session) => {
+      const label = document.createElement('label');
+      label.className = 'session-checkbox';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = session.id;
+      if (idsToCheck.size === 0) {
+        checkbox.checked = false;
+      } else {
+        checkbox.checked = idsToCheck.has(session.id);
+      }
+      const span = document.createElement('span');
+      span.textContent = `${session.name} (${formatTimestamp(session.updatedAt)})`;
+      label.append(checkbox, span);
+      list.appendChild(label);
+    });
+  }
+
+  const driveButton = document.getElementById('driveBackupButton');
+  if (driveButton) {
+    driveButton.disabled = !state.googleAuth.connected;
+    driveButton.title = state.googleAuth.connected ? '' : 'Log in with Google to enable backups.';
+  }
+}
+
+function selectAllDownloadSessions() {
+  document.querySelectorAll('#downloadSessionList input[type="checkbox"]').forEach((box) => {
+    box.checked = true;
+  });
+}
+
+function clearAllDownloadSessions() {
+  document.querySelectorAll('#downloadSessionList input[type="checkbox"]').forEach((box) => {
+    box.checked = false;
+  });
+}
+
+function getSelectedDownloadSessionIds() {
+  return Array.from(document.querySelectorAll('#downloadSessionList input[type="checkbox"]'))
+    .filter((box) => box.checked)
+    .map((box) => box.value);
+}
+
+function handleDownloadConfirm() {
+  const ids = getSelectedDownloadSessionIds();
+  if (ids.length === 0) {
+    alert('Select at least one session to download.');
+    return;
+  }
+  downloadSelectedSessions(ids);
+}
+
+function requestSceneStatusUpdate(sceneId) {
+  if (!sceneId) {
+    return;
+  }
+  state.pendingSceneChange = sceneId;
+  const message = document.getElementById('sceneStatusMessage');
+  if (message) {
+    message.textContent = `Update progress for ${sceneId}?`;
+  }
+  openModal('sceneStatusModal');
+}
+
+function setTeacherSceneStatus(status, sceneId = state.selectedSceneId) {
+  const session = getActiveTeacherSession();
+  if (!session || !sceneId) {
+    return;
+  }
+  if (!session.sceneProgress) {
+    session.sceneProgress = {};
+  }
+  if (status === 'started') {
+    Object.keys(session.sceneProgress).forEach((key) => {
+      if (session.sceneProgress[key] === 'started' && key !== sceneId) {
+        session.sceneProgress[key] = 'finished';
+      }
+    });
+  }
+  session.sceneProgress[sceneId] = status;
+  session.updatedAt = Date.now();
+  persistTeacherSessions();
+}
+
+function applySceneChange(sceneId) {
+  if (!sceneId) {
+    return;
+  }
+  state.selectedSceneId = sceneId;
+  prepareScene(sceneId);
+  renderReadingNav();
+  renderContent();
+}
+
+function openScenePromptModal(lastFinishedId, nextId) {
+  const message = document.getElementById('scenePromptMessage');
+  const actions = document.getElementById('scenePromptActions');
+  if (!message || !actions) {
+    return;
+  }
+  if (lastFinishedId) {
+    message.textContent = `The last finished page·scene is ${lastFinishedId}. Where would you like to go next?`;
+  } else {
+    message.textContent = 'No progress has been recorded yet. Choose a starting point.';
+  }
+  actions.innerHTML = '';
+
+  if (lastFinishedId) {
+    const viewLast = document.createElement('button');
+    viewLast.type = 'button';
+    viewLast.className = 'secondary-button';
+    viewLast.textContent = `View ${lastFinishedId}`;
+    viewLast.addEventListener('click', () => {
+      state.teacherScenePromptShown = true;
+      closeModal('scenePromptModal');
+      applySceneChange(lastFinishedId);
+    });
+    actions.appendChild(viewLast);
+  }
+
+  if (nextId) {
+    const viewNext = document.createElement('button');
+    viewNext.type = 'button';
+    viewNext.className = 'secondary-button primary';
+    viewNext.textContent = `Go to ${nextId}`;
+    viewNext.addEventListener('click', () => {
+      state.teacherScenePromptShown = true;
+      closeModal('scenePromptModal');
+      applySceneChange(nextId);
+    });
+    actions.appendChild(viewNext);
+  } else {
+    const note = document.createElement('p');
+    note.className = 'muted-text';
+    note.textContent = 'The next page·scene has not been created yet.';
+    actions.appendChild(note);
+  }
+
+  openModal('scenePromptModal');
+}
+
+function createSceneProgressControls() {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'scene-progress-controls';
+  const session = getActiveTeacherSession();
+  const sceneId = state.selectedSceneId;
+  if (!session || !sceneId) {
+    wrapper.textContent = 'Select a page·scene to manage progress.';
+    return wrapper;
+  }
+
+  const status = session.sceneProgress?.[sceneId];
+  const info = document.createElement('span');
+  info.className = 'muted-text';
+  info.textContent =
+    status === 'finished'
+      ? 'Marked as finished'
+      : status === 'started'
+      ? 'In progress'
+      : 'No progress recorded';
+  wrapper.appendChild(info);
+
+  const buttons = document.createElement('div');
+  buttons.className = 'scene-progress-buttons';
+
+  if (status !== 'finished') {
+    if (status !== 'started') {
+      const startButton = document.createElement('button');
+      startButton.type = 'button';
+      startButton.className = 'secondary-button primary';
+      startButton.textContent = 'Mark started';
+      startButton.addEventListener('click', () => {
+        setTeacherSceneStatus('started');
+        renderReadingNav();
+        renderContent();
+      });
+      buttons.appendChild(startButton);
+    } else {
+      const finishButton = document.createElement('button');
+      finishButton.type = 'button';
+      finishButton.className = 'secondary-button primary';
+      finishButton.textContent = 'Mark finished';
+      finishButton.addEventListener('click', () => {
+        setTeacherSceneStatus('finished');
+        renderReadingNav();
+        renderContent();
+      });
+      buttons.appendChild(finishButton);
+    }
+  } else {
+    const badge = document.createElement('span');
+    badge.className = 'status-badge';
+    badge.textContent = '✓ Completed';
+    buttons.appendChild(badge);
+  }
+
+  wrapper.appendChild(buttons);
+  return wrapper;
+}
+
+function renderTeacherGameStatus(container) {
+  const session = getActiveTeacherSession();
+  const card = document.createElement('section');
+  card.className = 'card game-status-card';
+  const title = document.createElement('h2');
+  title.textContent = 'Game Status';
+  card.appendChild(title);
+
+  if (!session) {
+    const message = document.createElement('p');
+    message.textContent = 'Select a session to manage game status.';
+    card.appendChild(message);
+    container.appendChild(card);
+    return;
+  }
+
+  card.appendChild(renderSleepCardSection(session));
+  card.appendChild(renderLostCardSection(session));
+  container.appendChild(card);
+}
+
+function renderSleepCardSection(session) {
+  const section = document.createElement('div');
+  section.className = 'status-section';
+  const heading = document.createElement('h3');
+  heading.textContent = 'Revealed Sleep Cards';
+  section.appendChild(heading);
+
+  const list = document.createElement('div');
+  list.className = 'sleep-card-list';
+
+  if (session.sleepCards.length === 0) {
+    const placeholder = document.createElement('p');
+    placeholder.className = 'muted-text';
+    placeholder.textContent = 'No sleep cards revealed yet.';
+    list.appendChild(placeholder);
+  } else {
+    session.sleepCards.forEach((card) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = `sleep-card ${card.status}`;
+      item.dataset.cardId = card.id;
+      item.textContent = card.status;
+      item.addEventListener('click', () => {
+        openSleepCardModal(card.id);
+      });
+      list.appendChild(item);
+    });
+  }
+
+  const addButton = document.createElement('button');
+  addButton.type = 'button';
+  addButton.className = 'add-card-button';
+  addButton.textContent = '+ Add';
+  addButton.addEventListener('click', () => {
+    openSleepCardModal(null);
+  });
+
+  list.appendChild(addButton);
+  section.appendChild(list);
+  return section;
+}
+
+function renderLostCardSection(session) {
+  const section = document.createElement('div');
+  section.className = 'status-section';
+  const heading = document.createElement('h3');
+  heading.textContent = 'Lost Cards Obtained';
+  section.appendChild(heading);
+
+  const list = document.createElement('div');
+  list.className = 'lost-card-list';
+
+  if (session.lostCards.length === 0) {
+    const placeholder = document.createElement('p');
+    placeholder.className = 'muted-text';
+    placeholder.textContent = 'No lost cards have been found.';
+    list.appendChild(placeholder);
+  } else {
+    session.lostCards.forEach((card) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'lost-card';
+      item.dataset.cardId = card.id;
+      item.textContent = card.name || 'Unnamed card';
+      item.addEventListener('click', () => {
+        openLostCardModal(card.id);
+      });
+      list.appendChild(item);
+    });
+  }
+
+  const addButton = document.createElement('button');
+  addButton.type = 'button';
+  addButton.className = 'add-card-button';
+  addButton.textContent = '+ Add';
+  addButton.addEventListener('click', () => {
+    openLostCardModal(null);
+  });
+
+  list.appendChild(addButton);
+  section.appendChild(list);
+  return section;
+}
+
+function openSleepCardModal(cardId) {
+  const session = getActiveTeacherSession();
+  if (!session) {
+    return;
+  }
+  state.activeSleepCardId = cardId;
+  const deleteButton = document.getElementById('sleepCardDelete');
+  const title = document.getElementById('sleepCardModalTitle');
+  if (cardId) {
+    const card = session.sleepCards.find((entry) => entry.id === cardId);
+    state.pendingSleepStatus = card?.status ?? 'sleeping';
+    if (deleteButton) {
+      deleteButton.textContent = 'Delete';
+    }
+    if (title) {
+      title.textContent = 'Edit Sleep Card';
+    }
+  } else {
+    state.pendingSleepStatus = 'sleeping';
+    if (deleteButton) {
+      deleteButton.textContent = 'Cancel';
+    }
+    if (title) {
+      title.textContent = 'Add Sleep Card';
+    }
+  }
+  syncSleepStatusButtons();
+  openModal('sleepCardModal');
+}
+
+function syncSleepStatusButtons() {
+  document.querySelectorAll('#sleepCardModal .status-chip').forEach((button) => {
+    if (button.dataset.status === state.pendingSleepStatus) {
+      button.classList.add('active');
+    } else {
+      button.classList.remove('active');
+    }
+  });
+}
+
+function handleSleepCardSave() {
+  const session = getActiveTeacherSession();
+  if (!session) {
+    return;
+  }
+  if (!session.sleepCards) {
+    session.sleepCards = [];
+  }
+  if (state.activeSleepCardId) {
+    const target = session.sleepCards.find((card) => card.id === state.activeSleepCardId);
+    if (target) {
+      target.status = state.pendingSleepStatus;
+    }
+  } else {
+    session.sleepCards.push({ id: `sleep-${Date.now()}`, status: state.pendingSleepStatus });
+  }
+  session.updatedAt = Date.now();
+  persistTeacherSessions();
+  closeModal('sleepCardModal');
+  renderContent();
+}
+
+function handleSleepCardDelete() {
+  const session = getActiveTeacherSession();
+  if (!session) {
+    closeModal('sleepCardModal');
+    return;
+  }
+  if (!state.activeSleepCardId) {
+    closeModal('sleepCardModal');
+    return;
+  }
+  session.sleepCards = session.sleepCards.filter((card) => card.id !== state.activeSleepCardId);
+  session.updatedAt = Date.now();
+  persistTeacherSessions();
+  closeModal('sleepCardModal');
+  renderContent();
+}
+
+function openLostCardModal(cardId) {
+  const session = getActiveTeacherSession();
+  if (!session) {
+    return;
+  }
+  state.activeLostCardId = cardId;
+  const input = document.getElementById('lostCardInput');
+  const title = document.getElementById('lostCardModalTitle');
+  const deleteButton = document.getElementById('lostCardDelete');
+  if (cardId) {
+    const card = session.lostCards.find((entry) => entry.id === cardId);
+    if (input) {
+      input.value = card?.name ?? '';
+    }
+    if (title) {
+      title.textContent = 'Edit Lost Card';
+    }
+    if (deleteButton) {
+      deleteButton.textContent = 'Delete';
+    }
+  } else {
+    if (input) {
+      input.value = '';
+    }
+    if (title) {
+      title.textContent = 'Add Lost Card';
+    }
+    if (deleteButton) {
+      deleteButton.textContent = 'Cancel';
+    }
+  }
+  openModal('lostCardModal');
+}
+
+function handleLostCardSave() {
+  const session = getActiveTeacherSession();
+  const input = document.getElementById('lostCardInput');
+  if (!session || !input) {
+    return;
+  }
+  const name = input.value.trim();
+  if (!name) {
+    alert('Please enter a card name.');
+    return;
+  }
+  if (!session.lostCards) {
+    session.lostCards = [];
+  }
+  if (state.activeLostCardId) {
+    const card = session.lostCards.find((entry) => entry.id === state.activeLostCardId);
+    if (card) {
+      card.name = name;
+    }
+  } else {
+    session.lostCards.push({ id: `lost-${Date.now()}`, name });
+  }
+  session.updatedAt = Date.now();
+  persistTeacherSessions();
+  closeModal('lostCardModal');
+  renderContent();
+}
+
+function handleLostCardDelete() {
+  const session = getActiveTeacherSession();
+  if (!session) {
+    closeModal('lostCardModal');
+    return;
+  }
+  if (!state.activeLostCardId) {
+    closeModal('lostCardModal');
+    return;
+  }
+  session.lostCards = session.lostCards.filter((card) => card.id !== state.activeLostCardId);
+  session.updatedAt = Date.now();
+  persistTeacherSessions();
+  closeModal('lostCardModal');
+  renderContent();
+}
+
+function downloadSelectedSessions(ids) {
+  const selected = state.teacherSessions.filter((session) => ids.includes(session.id));
+  if (selected.length === 0) {
+    alert('No matching sessions found.');
+    return;
+  }
+  const files = selected.map((session) => ({
+    name: getSessionFilename(session),
+    content: JSON.stringify(session, null, 2),
+  }));
+  let blob;
+  let filename;
+  if (files.length === 1) {
+    blob = new Blob([files[0].content], { type: 'application/json' });
+    filename = files[0].name;
+  } else {
+    blob = createZipArchive(files);
+    filename = `stuffed-fable-sessions-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+  }
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  closeModal('downloadModal');
+}
+
+function getSessionFilename(session) {
+  const slug = session.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return `${slug || 'session'}-${session.id}.json`;
+}
+
+function createZipArchive(files) {
+  let offset = 0;
+  const fileEntries = [];
+  const chunks = [];
+  const encoder = new TextEncoder();
+
+  files.forEach((file) => {
+    const nameBytes = encoder.encode(file.name);
+    const dataBytes = encoder.encode(file.content);
+    const crc = crc32(dataBytes);
+    const { time, date } = getZipTimestamp();
+    const localHeader = new DataView(new ArrayBuffer(30));
+    localHeader.setUint32(0, 0x04034b50, true);
+    localHeader.setUint16(4, 20, true);
+    localHeader.setUint16(6, 0, true);
+    localHeader.setUint16(8, 0, true);
+    localHeader.setUint16(10, time, true);
+    localHeader.setUint16(12, date, true);
+    localHeader.setUint32(14, crc, true);
+    localHeader.setUint32(18, dataBytes.length, true);
+    localHeader.setUint32(22, dataBytes.length, true);
+    localHeader.setUint16(26, nameBytes.length, true);
+    localHeader.setUint16(28, 0, true);
+
+    chunks.push(localHeader, nameBytes, dataBytes);
+    fileEntries.push({ nameBytes, dataBytes, crc, offset, time, date });
+    offset += 30 + nameBytes.length + dataBytes.length;
+  });
+
+  const centralChunks = [];
+  let centralSize = 0;
+  fileEntries.forEach((entry) => {
+    const header = new DataView(new ArrayBuffer(46));
+    header.setUint32(0, 0x02014b50, true);
+    header.setUint16(4, 0x0014, true);
+    header.setUint16(6, 0x0014, true);
+    header.setUint16(8, 0, true);
+    header.setUint16(10, 0, true);
+    header.setUint16(12, entry.time, true);
+    header.setUint16(14, entry.date, true);
+    header.setUint32(16, entry.crc, true);
+    header.setUint32(20, entry.dataBytes.length, true);
+    header.setUint32(24, entry.dataBytes.length, true);
+    header.setUint16(28, entry.nameBytes.length, true);
+    header.setUint16(30, 0, true);
+    header.setUint16(32, 0, true);
+    header.setUint16(34, 0, true);
+    header.setUint16(36, 0, true);
+    header.setUint32(38, 0, true);
+    header.setUint32(42, entry.offset, true);
+    centralChunks.push(header, entry.nameBytes);
+    centralSize += 46 + entry.nameBytes.length;
+  });
+
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(4, 0, true);
+  end.setUint16(6, 0, true);
+  end.setUint16(8, fileEntries.length, true);
+  end.setUint16(10, fileEntries.length, true);
+  end.setUint32(12, centralSize, true);
+  end.setUint32(16, offset, true);
+  end.setUint16(20, 0, true);
+
+  return new Blob([...chunks, ...centralChunks, end], { type: 'application/zip' });
+}
+
+function crc32(bytes) {
+  const table = (function buildTable() {
+    if (crc32.table) {
+      return crc32.table;
+    }
+    const tbl = new Uint32Array(256);
+    for (let i = 0; i < 256; i += 1) {
+      let c = i;
+      for (let j = 0; j < 8; j += 1) {
+        c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      }
+      tbl[i] = c >>> 0;
+    }
+    crc32.table = tbl;
+    return tbl;
+  })();
+  let crc = 0 ^ -1;
+  bytes.forEach((byte) => {
+    crc = (crc >>> 8) ^ table[(crc ^ byte) & 0xff];
+  });
+  return (crc ^ -1) >>> 0;
+}
+
+function getZipTimestamp() {
+  const now = new Date();
+  const time = ((now.getHours() & 0x1f) << 11) | ((now.getMinutes() & 0x3f) << 5) | (Math.floor(now.getSeconds() / 2) & 0x1f);
+  const date = (((now.getFullYear() - 1980) & 0x7f) << 9) | (((now.getMonth() + 1) & 0xf) << 5) | (now.getDate() & 0x1f);
+  return { time, date };
+}
+
+function handleDriveBackup() {
+  if (!state.googleAuth.connected) {
+    alert('Log in with Google to enable Drive backups.');
+    return;
+  }
+  const ids = getSelectedDownloadSessionIds();
+  if (ids.length === 0) {
+    alert('Select at least one session to back up.');
+    return;
+  }
+  backupSessionsToDrive(ids);
+  closeModal('downloadModal');
+}
+
+function backupSessionsToDrive(ids) {
+  const payload = state.teacherSessions.filter((session) => ids.includes(session.id));
+  console.info('Pretending to back up sessions to Google Drive:', payload);
+  alert('Google Drive backup requires API credentials. Check the console for the payload preview.');
+}
+
+function handleGoogleLogin() {
+  if (GOOGLE_CLIENT_ID.includes('YOUR_') || GOOGLE_API_KEY.includes('YOUR_')) {
+    alert('Add your Google API credentials in src/main.js to enable Google Drive backups.');
+    return;
+  }
+  state.googleAuth.connected = !state.googleAuth.connected;
+  state.googleAuth.message = state.googleAuth.connected
+    ? 'Connected to Google Drive (simulated).'
+    : 'Not connected';
+  renderContent();
 }
 
 function renderReadingContent(container) {
@@ -822,19 +2169,25 @@ function renderReadingContent(container) {
     return;
   }
 
+  const isTeacherSession = state.role === 'teacher' && state.teacherView === 'session';
+
   if (state.readingTab === 'narrative') {
-    renderNarrativeCard(container, scene);
+    renderNarrativeCard(container, scene, { isTeacherSession });
   } else {
-    renderTimelineCard(container, scene);
+    renderTimelineCard(container, scene, { isTeacherSession });
   }
 }
 
-function renderNarrativeCard(container, scene) {
+function renderNarrativeCard(container, scene, { isTeacherSession = false } = {}) {
   const card = document.createElement('article');
   card.className = 'card narrative-card';
   const title = document.createElement('h2');
   title.textContent = scene.narrative?.title ?? 'Narrative';
   card.appendChild(title);
+
+  if (isTeacherSession) {
+    card.appendChild(createSceneProgressControls());
+  }
 
   const vocabulary = scene.narrative?.vocabulary ?? [];
   const vocabularyWords = vocabulary.map((entry) => entry.word);
@@ -858,7 +2211,7 @@ function renderNarrativeCard(container, scene) {
   });
 }
 
-function renderTimelineCard(container, scene) {
+function renderTimelineCard(container, scene, { isTeacherSession = false } = {}) {
   const card = document.createElement('section');
   card.className = 'card timeline-card';
   const title = document.createElement('h2');
@@ -873,6 +2226,11 @@ function renderTimelineCard(container, scene) {
     tile.className = `timeline-tile ${event.type}`;
 
     if (event.type === 'anchor') {
+      tile.textContent = event.text;
+      if (isTeacherSession) {
+        tile.classList.add('teacher-anchor');
+      }
+    } else if (isTeacherSession) {
       tile.textContent = event.text;
     } else {
       tile.classList.add('blank');
@@ -900,6 +2258,11 @@ function renderTimelineCard(container, scene) {
   });
 
   card.appendChild(list);
+
+  if (isTeacherSession) {
+    container.appendChild(card);
+    return;
+  }
 
   const controls = document.createElement('div');
   controls.className = 'timeline-controls';
@@ -1236,12 +2599,31 @@ function openTimelineModal() {
   });
 }
 
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+}
+
 function closeModal(id) {
   const modal = document.getElementById(id);
   if (modal) {
     modal.classList.add('hidden');
     if (id === 'timelineModal') {
       state.activeTimelineTile = null;
+    }
+    if (id === 'sceneStatusModal') {
+      state.pendingSceneChange = null;
+    }
+    if (id === 'scenePromptModal') {
+      state.teacherScenePromptShown = true;
+    }
+    if (id === 'sleepCardModal') {
+      state.activeSleepCardId = null;
+    }
+    if (id === 'lostCardModal') {
+      state.activeLostCardId = null;
     }
   }
 }
