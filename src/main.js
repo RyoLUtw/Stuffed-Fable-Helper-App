@@ -902,6 +902,8 @@ function setupTeacherControls() {
         setTeacherSceneStatus('started', targetScene);
       }
       closeModal('sceneStatusModal');
+      state.pendingSceneChange = null;
+      state.pendingSceneStatusTarget = null;
       applySceneChange(destinationScene);
     });
   }
@@ -915,6 +917,8 @@ function setupTeacherControls() {
         setTeacherSceneStatus('finished', targetScene);
       }
       closeModal('sceneStatusModal');
+      state.pendingSceneChange = null;
+      state.pendingSceneStatusTarget = null;
       applySceneChange(destinationScene);
     });
   }
@@ -924,6 +928,8 @@ function setupTeacherControls() {
     skipButton.addEventListener('click', () => {
       const destinationScene = state.pendingSceneChange ?? state.selectedSceneId;
       closeModal('sceneStatusModal');
+      state.pendingSceneChange = null;
+      state.pendingSceneStatusTarget = null;
       applySceneChange(destinationScene);
     });
   }
@@ -1429,14 +1435,26 @@ function createTeacherSessionBanner() {
   actions.append(homeButton, downloadButton);
 
   const collapsible = document.createElement('details');
-  collapsible.className = 'teacher-collapsible';
+  collapsible.className = 'teacher-collapsible teacher-session-info';
   collapsible.open = true;
 
   const summary = document.createElement('summary');
-  summary.textContent = 'Session controls';
-  collapsible.append(summary, actions);
+  summary.className = 'teacher-session-summary';
+  const summaryTitle = document.createElement('span');
+  summaryTitle.className = 'summary-title';
+  summaryTitle.textContent = session.name;
+  const summaryMeta = document.createElement('span');
+  summaryMeta.className = 'summary-meta muted-text';
+  summaryMeta.textContent = `Updated ${formatTimestamp(session.updatedAt)}`;
+  summary.append(summaryTitle, summaryMeta);
 
-  card.append(title, meta, collapsible);
+  const body = document.createElement('div');
+  body.className = 'teacher-session-body';
+  body.append(title, meta, actions);
+
+  collapsible.append(summary, body);
+
+  card.append(collapsible);
   return card;
 }
 
@@ -1625,8 +1643,18 @@ function requestSceneStatusUpdate(nextSceneId) {
     return;
   }
   const currentSceneId = state.selectedSceneId;
+  const session = getActiveTeacherSession();
   state.pendingSceneChange = nextSceneId;
   state.pendingSceneStatusTarget = currentSceneId;
+  const currentStatus = currentSceneId ? session?.sceneProgress?.[currentSceneId] : null;
+
+  if (!currentSceneId || currentStatus === 'finished') {
+    state.pendingSceneChange = null;
+    state.pendingSceneStatusTarget = null;
+    applySceneChange(nextSceneId);
+    return;
+  }
+
   const message = document.getElementById('sceneStatusMessage');
   if (message) {
     if (currentSceneId) {
@@ -1646,14 +1674,18 @@ function setTeacherSceneStatus(status, sceneId = state.selectedSceneId) {
   if (!session.sceneProgress) {
     session.sceneProgress = {};
   }
-  if (status === 'started') {
-    Object.keys(session.sceneProgress).forEach((key) => {
-      if (session.sceneProgress[key] === 'started' && key !== sceneId) {
-        session.sceneProgress[key] = 'finished';
-      }
-    });
+  if (!status) {
+    delete session.sceneProgress[sceneId];
+  } else {
+    if (status === 'started') {
+      Object.keys(session.sceneProgress).forEach((key) => {
+        if (session.sceneProgress[key] === 'started' && key !== sceneId) {
+          session.sceneProgress[key] = 'finished';
+        }
+      });
+    }
+    session.sceneProgress[sceneId] = status;
   }
-  session.sceneProgress[sceneId] = status;
   session.updatedAt = Date.now();
   persistTeacherSessions();
 }
@@ -1768,6 +1800,19 @@ function createSceneProgressControls() {
     badge.className = 'status-badge';
     badge.textContent = '✓ Completed';
     buttons.appendChild(badge);
+  }
+
+  if (status === 'started' || status === 'finished') {
+    const resetButton = document.createElement('button');
+    resetButton.type = 'button';
+    resetButton.className = 'secondary-button secondary';
+    resetButton.textContent = 'Reset status';
+    resetButton.addEventListener('click', () => {
+      setTeacherSceneStatus(null);
+      renderReadingNav();
+      renderContent();
+    });
+    buttons.appendChild(resetButton);
   }
 
   wrapper.appendChild(buttons);
