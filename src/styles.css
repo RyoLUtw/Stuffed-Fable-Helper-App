@@ -201,6 +201,26 @@ body {
   list-style: none;
 }
 
+.teacher-session-summary {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.teacher-session-summary .summary-title {
+  font-size: 1rem;
+}
+
+.teacher-session-summary .summary-meta {
+  font-size: 0.9rem;
+}
+
+.teacher-session-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .teacher-collapsible summary::-webkit-details-marker {
   display: none;
 }
