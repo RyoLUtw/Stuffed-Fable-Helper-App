@@ -7,6 +7,12 @@ const DIE_OPTIONS = [
   { value: 'blue', color: '#3b82f6' },
   { value: 'white', color: '#ffffff' },
 ];
+const ITEM_SLOTS = [
+  { key: 'head', label: 'Head' },
+  { key: 'body', label: 'Body' },
+  { key: 'paws', label: 'Paws' },
+  { key: 'accessory', label: 'Accessory' },
+];
 const STATUS_OPTIONS = [
   { value: 'worried', label: 'Worried' },
   { value: 'scorched', label: 'Scorched' },
@@ -24,6 +30,51 @@ const STORAGE_KEYS = {
   timelinePrefix: 'stuffed-fable/timeline/',
 };
 
+function createEmptyItemSlots() {
+  return ITEM_SLOTS.reduce((slots, slot) => {
+    slots[slot.key] = '';
+    return slots;
+  }, {});
+}
+
+function normalizeItemSlots(rawItems) {
+  const slots = createEmptyItemSlots();
+  if (Array.isArray(rawItems)) {
+    rawItems
+      .filter((item) => typeof item === 'string' && item.trim())
+      .slice(0, ITEM_SLOTS.length)
+      .forEach((item, index) => {
+        const slotKey = ITEM_SLOTS[index]?.key;
+        if (slotKey) {
+          slots[slotKey] = item.trim();
+        }
+      });
+    return slots;
+  }
+
+  if (rawItems && typeof rawItems === 'object') {
+    ITEM_SLOTS.forEach(({ key }) => {
+      const value = rawItems[key];
+      slots[key] = typeof value === 'string' && value.trim() ? value.trim() : '';
+    });
+  }
+
+  return slots;
+}
+
+function createDefaultCharacter(label, name) {
+  return {
+    label,
+    name,
+    stuffing: 0,
+    heart: 0,
+    buttons: 0,
+    die: null,
+    statuses: [],
+    items: createEmptyItemSlots(),
+  };
+}
+
 const state = {
   mode: 'reading',
   readingTab: 'narrative',
@@ -38,28 +89,8 @@ const state = {
   timelineAttempts: 0,
   activeTimelineTile: null,
   characters: [
-    {
-      label: 'Character 1',
-      name: 'Lumpy',
-      stuffing: 0,
-      heart: 0,
-      buttons: 0,
-      die: null,
-      statuses: [],
-      items: [],
-      activeItemIndex: null,
-    },
-    {
-      label: 'Character 2',
-      name: 'Flops',
-      stuffing: 0,
-      heart: 0,
-      buttons: 0,
-      die: null,
-      statuses: [],
-      items: [],
-      activeItemIndex: null,
-    },
+    createDefaultCharacter('Character 1', 'Lumpy'),
+    createDefaultCharacter('Character 2', 'Flops'),
   ],
   activeCharacterIndex: 0,
 };
@@ -275,6 +306,63 @@ function loadGameplayProgress() {
   }
 }
 
+function sanitizeCharacter(savedCharacter, fallbackCharacter) {
+  const base = {
+    label: fallbackCharacter.label,
+    name: fallbackCharacter.name,
+    stuffing: fallbackCharacter.stuffing,
+    heart: fallbackCharacter.heart,
+    buttons: fallbackCharacter.buttons,
+    die: fallbackCharacter.die,
+    statuses: [...fallbackCharacter.statuses],
+    items: { ...fallbackCharacter.items },
+  };
+
+  if (!savedCharacter || typeof savedCharacter !== 'object') {
+    return base;
+  }
+
+  const dieOption = DIE_OPTIONS.find((option) => option.value === savedCharacter.die)?.value ?? null;
+  const validStatuses = Array.isArray(savedCharacter.statuses)
+    ? Array.from(
+        new Set(savedCharacter.statuses.filter((status) => STATUS_OPTIONS.some((option) => option.value === status)))
+      )
+    : base.statuses;
+
+  return {
+    ...base,
+    name: CHARACTER_NAMES.includes(savedCharacter.name) ? savedCharacter.name : base.name,
+    stuffing: clampNumber(savedCharacter.stuffing, 0, 5, base.stuffing),
+    heart: clampNumber(savedCharacter.heart, 0, Number.POSITIVE_INFINITY, base.heart),
+    buttons: clampNumber(savedCharacter.buttons, 0, Number.POSITIVE_INFINITY, base.buttons),
+    die: dieOption,
+    statuses: validStatuses,
+    items: normalizeItemSlots(savedCharacter.items),
+  };
+}
+
+function applyGameplayState(saved) {
+  if (!saved || typeof saved !== 'object') {
+    throw new Error('Invalid gameplay data');
+  }
+
+  if (!Array.isArray(saved.characters) || saved.characters.length === 0) {
+    throw new Error('Gameplay data missing characters.');
+  }
+
+  state.characters = state.characters.map((character, index) => {
+    const savedCharacter = saved.characters[index];
+    return sanitizeCharacter(savedCharacter, character);
+  });
+
+  if (typeof saved.activeCharacterIndex === 'number') {
+    const indexValue = clampNumber(saved.activeCharacterIndex, 0, state.characters.length - 1, state.activeCharacterIndex);
+    state.activeCharacterIndex = indexValue;
+  } else if (state.activeCharacterIndex >= state.characters.length) {
+    state.activeCharacterIndex = 0;
+  }
+}
+
 function clampNumber(value, min, max, fallback) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -297,54 +385,10 @@ function hydrateGameplayState() {
     return;
   }
 
-  if (Array.isArray(saved.characters) && saved.characters.length > 0) {
-    state.characters = state.characters.map((character, index) => {
-      const savedCharacter = saved.characters[index];
-      if (!savedCharacter || typeof savedCharacter !== 'object') {
-        return character;
-      }
-
-      const sanitizedItems = Array.isArray(savedCharacter.items)
-        ? savedCharacter.items.filter((item) => typeof item === 'string' && item.trim()).map((item) => item.trim())
-        : [];
-
-      const activeItemIndex =
-        Number.isInteger(savedCharacter.activeItemIndex) &&
-        savedCharacter.activeItemIndex >= 0 &&
-        savedCharacter.activeItemIndex < sanitizedItems.length
-          ? savedCharacter.activeItemIndex
-          : null;
-
-      const dieOption = DIE_OPTIONS.find((option) => option.value === savedCharacter.die)?.value ?? null;
-      const validStatuses = Array.isArray(savedCharacter.statuses)
-        ? Array.from(
-            new Set(
-              savedCharacter.statuses.filter((status) =>
-                STATUS_OPTIONS.some((option) => option.value === status)
-              )
-            )
-          )
-        : [];
-
-      return {
-        ...character,
-        name: CHARACTER_NAMES.includes(savedCharacter.name) ? savedCharacter.name : character.name,
-        stuffing: clampNumber(savedCharacter.stuffing, 0, 5, character.stuffing),
-        heart: clampNumber(savedCharacter.heart, 0, Number.POSITIVE_INFINITY, character.heart),
-        buttons: clampNumber(savedCharacter.buttons, 0, Number.POSITIVE_INFINITY, character.buttons),
-        die: dieOption,
-        statuses: validStatuses,
-        items: sanitizedItems,
-        activeItemIndex,
-      };
-    });
-  }
-
-  if (typeof saved.activeCharacterIndex === 'number') {
-    const indexValue = Math.round(saved.activeCharacterIndex);
-    if (indexValue >= 0 && indexValue < state.characters.length) {
-      state.activeCharacterIndex = indexValue;
-    }
+  try {
+    applyGameplayState(saved);
+  } catch (error) {
+    console.warn('Unable to hydrate gameplay state.', error);
   }
 }
 
@@ -353,7 +397,19 @@ function saveGameplayProgress() {
     return;
   }
 
-  const payload = {
+  const payload = getGameplaySnapshot();
+
+  const success = attemptStorageWrite(() => {
+    window.localStorage.setItem(STORAGE_KEYS.gameplay, JSON.stringify(payload));
+  });
+  if (!success) {
+    console.warn('Unable to persist gameplay progress.');
+  }
+}
+
+function getGameplaySnapshot() {
+  return {
+    version: 1,
     activeCharacterIndex: state.activeCharacterIndex,
     characters: state.characters.map((character) => ({
       label: character.label,
@@ -363,17 +419,35 @@ function saveGameplayProgress() {
       buttons: character.buttons,
       die: character.die,
       statuses: [...character.statuses],
-      items: [...character.items],
-      activeItemIndex: character.activeItemIndex,
+      items: { ...character.items },
     })),
   };
+}
 
-  const success = attemptStorageWrite(() => {
-    window.localStorage.setItem(STORAGE_KEYS.gameplay, JSON.stringify(payload));
-  });
-  if (!success) {
-    console.warn('Unable to persist gameplay progress.');
+function downloadGameplayBackup() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    data: getGameplaySnapshot(),
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `stuffed-fable-gameplay-backup-${new Date()
+    .toISOString()
+    .replace(/[:.]/g, '-')}.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function extractGameplayData(raw) {
+  if (raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object') {
+    return raw.data;
   }
+  return raw;
 }
 
 function hydrateFromStorage() {
@@ -942,76 +1016,112 @@ function renderGameplayContent(container) {
   itemsHeading.textContent = 'Items';
   itemsSection.appendChild(itemsHeading);
 
-  const itemList = document.createElement('div');
-  itemList.className = 'item-list';
+  const itemGrid = document.createElement('div');
+  itemGrid.className = 'item-slot-grid';
 
-  if (activeCharacter.items.length === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'placeholder';
-    empty.textContent = 'No items recorded yet.';
-    itemList.appendChild(empty);
-  } else {
-    activeCharacter.items.forEach((item, index) => {
-      const tile = document.createElement('div');
-      tile.className = 'item-tile';
-      if (activeCharacter.activeItemIndex === index) {
-        tile.classList.add('active');
+  ITEM_SLOTS.forEach(({ key, label }) => {
+    const slot = document.createElement('div');
+    slot.className = 'item-slot';
+
+    const slotLabel = document.createElement('span');
+    slotLabel.className = 'item-slot-label';
+    slotLabel.textContent = label;
+
+    const slotValue = document.createElement('span');
+    slotValue.className = 'item-slot-value';
+    if (activeCharacter.items[key]) {
+      slotValue.textContent = activeCharacter.items[key];
+    } else {
+      slotValue.textContent = 'Empty';
+      slotValue.classList.add('empty');
+    }
+
+    const slotActions = document.createElement('div');
+    slotActions.className = 'item-slot-actions';
+
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'item-slot-btn';
+    editButton.textContent = activeCharacter.items[key] ? 'Edit' : 'Add';
+    editButton.addEventListener('click', () => {
+      const updated = prompt(`Set ${label} item`, activeCharacter.items[key] || '');
+      if (updated === null) {
+        return;
       }
-      tile.innerHTML = `
-        <span>${item}</span>
-        <span class="item-actions">
-          <button class="item-action-btn edit" type="button">Edit</button>
-          <button class="item-action-btn delete" type="button">Delete</button>
-        </span>
-      `;
-
-      tile.addEventListener('click', () => {
-        activeCharacter.activeItemIndex = activeCharacter.activeItemIndex === index ? null : index;
-        saveGameplayProgress();
-        renderContent();
-      });
-
-      tile.querySelector('.edit').addEventListener('click', (event) => {
-        event.stopPropagation();
-        const updated = prompt('Update item', item);
-        if (updated && updated.trim()) {
-          activeCharacter.items[index] = updated.trim();
-          saveGameplayProgress();
-          renderContent();
-        }
-      });
-
-      tile.querySelector('.delete').addEventListener('click', (event) => {
-        event.stopPropagation();
-        activeCharacter.items.splice(index, 1);
-        if (activeCharacter.activeItemIndex === index) {
-          activeCharacter.activeItemIndex = null;
-        }
-        saveGameplayProgress();
-        renderContent();
-      });
-
-      itemList.appendChild(tile);
-    });
-  }
-
-  itemsSection.appendChild(itemList);
-
-  const addItemButton = document.createElement('button');
-  addItemButton.type = 'button';
-  addItemButton.className = 'add-item-btn';
-  addItemButton.textContent = 'Add Item';
-  addItemButton.addEventListener('click', () => {
-    const newItem = prompt('Add new item');
-    if (newItem && newItem.trim()) {
-      activeCharacter.items.push(newItem.trim());
+      const trimmed = updated.trim();
+      activeCharacter.items[key] = trimmed;
       saveGameplayProgress();
       renderContent();
+    });
+    slotActions.appendChild(editButton);
+
+    if (activeCharacter.items[key]) {
+      const clearButton = document.createElement('button');
+      clearButton.type = 'button';
+      clearButton.className = 'item-slot-btn secondary';
+      clearButton.textContent = 'Clear';
+      clearButton.addEventListener('click', () => {
+        activeCharacter.items[key] = '';
+        saveGameplayProgress();
+        renderContent();
+      });
+      slotActions.appendChild(clearButton);
+    }
+
+    slot.append(slotLabel, slotValue, slotActions);
+    itemGrid.appendChild(slot);
+  });
+
+  itemsSection.appendChild(itemGrid);
+  card.appendChild(itemsSection);
+
+  const backupSection = document.createElement('div');
+  backupSection.className = 'backup-controls';
+
+  const backupButton = document.createElement('button');
+  backupButton.type = 'button';
+  backupButton.className = 'secondary-button';
+  backupButton.textContent = 'Back Up Data';
+  backupButton.addEventListener('click', () => {
+    downloadGameplayBackup();
+  });
+
+  const uploadInput = document.createElement('input');
+  uploadInput.type = 'file';
+  uploadInput.accept = 'application/json';
+  uploadInput.className = 'visually-hidden';
+
+  const uploadButton = document.createElement('button');
+  uploadButton.type = 'button';
+  uploadButton.className = 'secondary-button';
+  uploadButton.textContent = 'Restore Backup';
+  uploadButton.addEventListener('click', () => {
+    uploadInput.click();
+  });
+
+  uploadInput.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const gameplayData = extractGameplayData(parsed);
+      applyGameplayState(gameplayData);
+      saveGameplayProgress();
+      renderGameplayNav();
+      renderContent();
+    } catch (error) {
+      console.error('Backup import failed.', error);
+      alert('Unable to import backup file. Please ensure it was created by this app.');
+    } finally {
+      event.target.value = '';
     }
   });
 
-  itemsSection.appendChild(addItemButton);
-  card.appendChild(itemsSection);
+  backupSection.append(backupButton, uploadButton, uploadInput);
+  card.appendChild(backupSection);
   container.appendChild(card);
 }
 

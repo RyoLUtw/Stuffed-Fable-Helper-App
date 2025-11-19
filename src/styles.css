@@ -409,63 +409,80 @@ body {
 .items-section {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+
+.item-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 
-.item-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.item-tile {
-  padding: 12px;
-  border-radius: 12px;
+.item-slot {
+  border-radius: 16px;
+  padding: 16px;
   background: rgba(93, 96, 255, 0.08);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  position: relative;
-}
-
-.item-tile .item-actions {
-  display: none;
+  flex-direction: column;
   gap: 8px;
 }
 
-.item-tile.active .item-actions {
-  display: inline-flex;
+.item-slot-label {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
 }
 
-.item-action-btn {
-  border: none;
-  border-radius: 8px;
-  padding: 6px 10px;
+.item-slot-value {
   font-weight: 600;
-  cursor: pointer;
+  min-height: 24px;
 }
 
-.item-action-btn.edit {
-  background: var(--accent);
-  color: #1f2933;
+.item-slot-value.empty {
+  color: rgba(17, 24, 39, 0.6);
+  font-style: italic;
 }
 
-.item-action-btn.delete {
-  background: rgba(231, 76, 60, 0.85);
-  color: white;
+.item-slot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.add-item-btn {
-  align-self: flex-start;
+.item-slot-btn,
+.secondary-button {
   border: none;
   border-radius: 12px;
-  padding: 10px 16px;
-  background: var(--primary);
-  color: white;
+  padding: 8px 14px;
   font-weight: 700;
   cursor: pointer;
+  background: var(--primary);
+  color: white;
   box-shadow: var(--shadow);
+}
+
+.item-slot-btn.secondary,
+.secondary-button.secondary {
+  background: rgba(17, 24, 39, 0.1);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.backup-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.visually-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
 }
 
 @media (max-width: 640px) {
