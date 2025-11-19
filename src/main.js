@@ -575,6 +575,21 @@ function createTeacherSession(name) {
   };
 }
 
+function deleteTeacherSession(sessionId) {
+  const nextSessions = state.teacherSessions.filter((session) => session.id !== sessionId);
+  if (nextSessions.length === state.teacherSessions.length) {
+    return false;
+  }
+
+  state.teacherSessions = nextSessions;
+  if (state.selectedTeacherSessionId === sessionId) {
+    state.selectedTeacherSessionId = null;
+  }
+
+  persistTeacherSessions();
+  return true;
+}
+
 function getActiveTeacherSession() {
   if (!state.selectedTeacherSessionId) {
     return null;
@@ -1328,7 +1343,31 @@ function createSessionCard(session) {
     enterTeacherSession(session.id);
   });
 
-  buttonRow.appendChild(openButton);
+  const deleteButton = document.createElement('button');
+  deleteButton.type = 'button';
+  deleteButton.className = 'secondary-button danger';
+  deleteButton.textContent = 'Delete';
+  deleteButton.addEventListener('click', () => {
+    const confirmed = window.confirm(`Delete "${session.name}"? This action cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    const shouldExitSession = state.selectedTeacherSessionId === session.id && state.teacherView === 'session';
+    const deleted = deleteTeacherSession(session.id);
+    if (!deleted) {
+      return;
+    }
+
+    if (shouldExitSession) {
+      exitTeacherSession();
+      return;
+    }
+
+    renderContent();
+  });
+
+  buttonRow.append(openButton, deleteButton);
   card.append(title, timestamp, buttonRow);
   return card;
 }
@@ -1380,7 +1419,16 @@ function createTeacherSessionBanner() {
   });
 
   actions.append(homeButton, downloadButton);
-  card.append(title, meta, actions);
+
+  const collapsible = document.createElement('details');
+  collapsible.className = 'teacher-collapsible';
+  collapsible.open = true;
+
+  const summary = document.createElement('summary');
+  summary.textContent = 'Session controls';
+  collapsible.append(summary, actions);
+
+  card.append(title, meta, collapsible);
   return card;
 }
 

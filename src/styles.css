@@ -184,6 +184,35 @@ body {
   align-items: center;
 }
 
+.teacher-collapsible {
+  border: 1px solid rgba(31, 41, 51, 0.12);
+  border-radius: 16px;
+  padding: 12px 16px;
+  background: rgba(31, 41, 51, 0.04);
+}
+
+.teacher-collapsible summary {
+  cursor: pointer;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  list-style: none;
+}
+
+.teacher-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.teacher-collapsible summary::marker {
+  content: '';
+}
+
+.teacher-collapsible[open] .teacher-actions {
+  margin-top: 12px;
+}
+
 .teacher-actions span {
   font-size: 0.9rem;
 }
@@ -697,6 +726,11 @@ body {
   background: rgba(17, 24, 39, 0.1);
   color: var(--text);
   box-shadow: none;
+}
+
+.secondary-button.danger {
+  background: #dc2626;
+  color: white;
 }
 
 .backup-controls {
