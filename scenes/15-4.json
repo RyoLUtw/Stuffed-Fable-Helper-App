@@ -1,0 +1,71 @@
+{
+  "narrative": {
+    "title": "Scene 15-4 — Asking How to Get Home",
+    "paragraphs": [
+      "Again desperate, the stuffies asked how they could escape this strange world. Lamunda, the old puppet, told them the exit lay deep within Bramblebum, hidden inside a strange little house. She urged them to seek the path without delay. Realizing how dangerous the journey would be, the stuffies thanked her and prepared to seek the way home."
+    ],
+    "vocabulary": [
+      {
+        "word": "desperate",
+        "definition": "Feeling or showing a need for something very badly, often because time or options are running out.",
+        "examples": [
+          "She sounded desperate when asking for help.",
+          "It was a desperate situation with no easy solution."
+        ]
+      },
+      {
+        "word": "puppet",
+        "definition": "A small figure controlled by hand, strings, or rods.",
+        "examples": [
+          "The puppet danced across the tiny stage.",
+          "He used a puppet to entertain the children."
+        ]
+      },
+      {
+        "word": "seek",
+        "definition": "To look for something or try to find it.",
+        "examples": [
+          "They seek shelter from the storm.",
+          "She seeks answers to her many questions."
+        ]
+      },
+      {
+        "word": "urged",
+        "definition": "Strongly advised or encouraged someone to do something.",
+        "examples": [
+          "The teacher urged the students to ask more questions.",
+          "He urged his friend to be honest about the mistake."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The stuffies desperately ask Lamunda how to escape this world."
+      },
+      {
+        "type": "blank",
+        "text": "Lamunda explains the exit lies within Bramblebum Forest."
+      },
+      {
+        "type": "blank",
+        "text": "She tells them it hides inside a strange little house."
+      },
+      {
+        "type": "anchor",
+        "text": "They realize they must travel back through the dangerous woods."
+      },
+      {
+        "type": "blank",
+        "text": "Lamunda sends them off with her cryptic warning."
+      }
+    ],
+    "distractors": [
+      "Lamunda gives them a shortcut that leads directly into Crepitus’s fortress.",
+      "She tells them to stay in Squalor forever because it’s safest.",
+      "The exit can be reached by climbing the fortress towers."
+    ]
+  }
+}

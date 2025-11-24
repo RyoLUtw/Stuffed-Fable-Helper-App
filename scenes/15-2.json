@@ -1,0 +1,87 @@
+{
+  "narrative": {
+    "title": "Scene 15-2 — Entering Lamunda’s Pavilion",
+    "paragraphs": [
+      "The stuffies slipped inside a dimly lit pavilion where a polished black orb rested on a small table. Lamunda observed them quietly at first, then exclaimed in surprise as they approached. She invited them to sit and listened closely, ready to share whatever guidance they needed."
+    ],
+    "vocabulary": [
+      {
+        "word": "dimly",
+        "definition": "In a way that is not bright; with low light.",
+        "examples": [
+          "The room was dimly lit by a small lamp.",
+          "Shapes moved dimly in the fog."
+        ]
+      },
+      {
+        "word": "lit",
+        "definition": "Provided with light or made bright.",
+        "examples": [
+          "The hallway was lit by flickering candles.",
+          "The stage lit up as the show began."
+        ]
+      },
+      {
+        "word": "polished",
+        "definition": "Made smooth and shiny by rubbing.",
+        "examples": [
+          "She polished the wooden table until it gleamed.",
+          "The polished stone reflected the sunlight."
+        ]
+      },
+      {
+        "word": "observed",
+        "definition": "Watched something carefully or noticed it.",
+        "examples": [
+          "The scientist observed the ants crawling in a line.",
+          "She observed that the door had been left open."
+        ]
+      },
+      {
+        "word": "exclaimed",
+        "definition": "Spoke suddenly and loudly because of surprise or excitement.",
+        "examples": [
+          "“Wow!” he exclaimed when he saw the huge painting.",
+          "She exclaimed in joy when the package arrived."
+        ]
+      },
+      {
+        "word": "slipped",
+        "definition": "Moved quietly or quickly, often so as not to be noticed.",
+        "examples": [
+          "He slipped out of the room without anyone seeing him.",
+          "They slipped through the door just before it closed."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The stuffies enter a dimly lit pavilion."
+      },
+      {
+        "type": "blank",
+        "text": "A polished black orb sits on the small round table."
+      },
+      {
+        "type": "blank",
+        "text": "Lamunda observed their arrival with interest."
+      },
+      {
+        "type": "anchor",
+        "text": "She exclaimed when they approached, noting they were far from home."
+      },
+      {
+        "type": "blank",
+        "text": "She invites them to sit and ask what they wish to know."
+      }
+    ],
+    "distractors": [
+      "Lamunda hides behind a curtain and refuses to speak to them.",
+      "The pavilion is brightly lit by dozens of lanterns.",
+      "A group of crawlies guard the entrance to Lamunda’s tent."
+    ]
+  }
+}

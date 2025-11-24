@@ -1,0 +1,87 @@
+{
+  "narrative": {
+    "title": "Scene 15-5 — Knuckle Demands the Blanket",
+    "paragraphs": [
+      "An overlarge figure emerged from the doorway, accompanied by two crawlies. Knuckle stomped toward them to demand the blanket and threatened to tear it from their paws. The marketplace grew tense as a crowded ring formed around them. The stuffies braced themselves, determined to protect what mattered most."
+    ],
+    "vocabulary": [
+      {
+        "word": "overlarge",
+        "definition": "Much bigger than normal or than what is needed.",
+        "examples": [
+          "He wore an overlarge coat that nearly reached the floor.",
+          "The overlarge helmet slid down over her eyes."
+        ]
+      },
+      {
+        "word": "emerged",
+        "definition": "Came out of or appeared from somewhere.",
+        "examples": [
+          "The turtle emerged from its shell.",
+          "A figure emerged from the shadows."
+        ]
+      },
+      {
+        "word": "accompanied",
+        "definition": "Went somewhere together with someone or something.",
+        "examples": [
+          "She accompanied her friend to the airport.",
+          "The knight was accompanied by two guards."
+        ]
+      },
+      {
+        "word": "tear",
+        "definition": "To pull something hard enough to make it rip apart.",
+        "examples": [
+          "Try not to tear the paper when opening the envelope.",
+          "The dog might tear the blanket if it pulls too strongly."
+        ]
+      },
+      {
+        "word": "stomp",
+        "definition": "To walk or step heavily, often showing anger or frustration.",
+        "examples": [
+          "He began to stomp around the room after losing the game.",
+          "The child stomped his feet to show he was upset."
+        ]
+      },
+      {
+        "word": "demand",
+        "definition": "To ask for something firmly and insist that it must be given or done.",
+        "examples": [
+          "She will demand a clear answer from the manager.",
+          "They demand fair treatment for everyone."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "An overlarge stuffy named Knuckle emerges from Shanty’s."
+      },
+      {
+        "type": "blank",
+        "text": "He is accompanied by two crawlies."
+      },
+      {
+        "type": "blank",
+        "text": "Knuckle demands the blanket and threatens to tear their arms off."
+      },
+      {
+        "type": "anchor",
+        "text": "A battle breaks out in the crowded marketplace."
+      },
+      {
+        "type": "blank",
+        "text": "The stuffies struggle to keep the blanket away from Knuckle."
+      }
+    ],
+    "distractors": [
+      "Knuckle gently asks for directions instead of threatening them.",
+      "The crawlies help the stuffies protect the blanket.",
+      "The market empties as all toys hide from a sudden sandstorm."
+    ]
+  }
+}

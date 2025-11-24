@@ -1,0 +1,103 @@
+{
+  "narrative": {
+    "title": "Scene 15-6 — If Knuckle Escapes With the Blanket",
+    "paragraphs": [
+      "Knuckle charged away with the blanket clutched in his huge paw. With time running short, the stuffies rushed down each crowded lane and bought a similar blanket from a nearby stall. It wasn’t the same, but it would still keep their child warm. Holding the replacement close, they gathered themselves and prepared to leave Squalor behind."
+    ],
+    "vocabulary": [
+      {
+        "word": "paw",
+        "definition": "The foot of an animal that has fur, claws, or pads.",
+        "examples": [
+          "The cat placed its paw on her arm.",
+          "Mud covered the dog’s paws after the walk."
+        ]
+      },
+      {
+        "word": "crowded",
+        "definition": "Filled with too many people or things.",
+        "examples": [
+          "The bus was crowded and there were no seats left.",
+          "They avoided the crowded market during the holiday."
+        ]
+      },
+      {
+        "word": "running short",
+        "definition": "Having less and less of something, with the supply almost gone.",
+        "examples": [
+          "We are running short on time, so let’s hurry.",
+          "The store was running short on bottled water after the storm."
+        ]
+      },
+      {
+        "word": "similar",
+        "definition": "Almost the same, but not completely identical.",
+        "examples": [
+          "The two drawings looked similar.",
+          "Their opinions were similar even though they hadn’t discussed them."
+        ]
+      },
+      {
+        "word": "lane",
+        "definition": "A narrow road or path, often between fields or buildings.",
+        "examples": [
+          "They walked down a quiet country lane.",
+          "Cars filled every lane on the busy highway."
+        ]
+      },
+      {
+        "word": "clutched",
+        "definition": "Held something tightly, often because of fear or worry.",
+        "examples": [
+          "She clutched the handle of her bag on the train.",
+          "The child clutched his toy and refused to let go."
+        ]
+      },
+      {
+        "word": "rushed",
+        "definition": "Moved or acted quickly, often because there was little time.",
+        "examples": [
+          "They rushed to catch the last bus.",
+          "He rushed through his homework so he could play."
+        ]
+      },
+      {
+        "word": "replacement",
+        "definition": "Something that takes the place of what was lost, broken, or used before.",
+        "examples": [
+          "She needed a replacement for her broken watch.",
+          "They bought a replacement part for the old machine."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "Knuckle runs off with the blanket in his massive paw."
+      },
+      {
+        "type": "blank",
+        "text": "The stuffies realize time is running short."
+      },
+      {
+        "type": "blank",
+        "text": "They buy a similar blanket from the market."
+      },
+      {
+        "type": "anchor",
+        "text": "They accept the replacement to keep their child warm."
+      },
+      {
+        "type": "blank",
+        "text": "The group prepares to leave Squalor."
+      }
+    ],
+    "distractors": [
+      "Knuckle returns the blanket after feeling guilty.",
+      "The stuffies discover the blanket was never stolen at all.",
+      "A vendor refuses to sell any blankets to outsiders."
+    ]
+  }
+}

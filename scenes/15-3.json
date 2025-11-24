@@ -1,0 +1,87 @@
+{
+  "narrative": {
+    "title": "Scene 15-3 — Seeking the Blanket",
+    "paragraphs": [
+      "Their voices were desperate as they begged Lamunda for help. She warned them that the blanket’s fate was uncertain and that Crepitus might detect its presence already. She also noted the air around the marketplace felt saturated with worry, as if danger lingered close. When she revealed that the blanket sat somewhere in the busy stalls, the stuffies hurried off, knowing they had to find it before anyone else did."
+    ],
+    "vocabulary": [
+      {
+        "word": "desperate",
+        "definition": "Feeling or showing a need for something very badly, often because time or options are running out.",
+        "examples": [
+          "He made a desperate attempt to catch the bus.",
+          "The team felt desperate after losing their last chance to score."
+        ]
+      },
+      {
+        "word": "uncertain",
+        "definition": "Not sure about something; unclear or not decided.",
+        "examples": [
+          "She was uncertain about which path to take.",
+          "The weather looked uncertain, shifting between sun and clouds."
+        ]
+      },
+      {
+        "word": "detect",
+        "definition": "To notice or discover something that is not easily seen.",
+        "examples": [
+          "The device can detect very small movements.",
+          "She could detect a faint smell of smoke in the air."
+        ]
+      },
+      {
+        "word": "presence",
+        "definition": "The state of being in a place, or the feeling that someone or something is there.",
+        "examples": [
+          "His presence in the room made everyone calm down.",
+          "She felt the presence of someone behind her."
+        ]
+      },
+      {
+        "word": "saturated",
+        "definition": "Soaked or filled completely with something.",
+        "examples": [
+          "The sponge was saturated with water.",
+          "His clothes were saturated after walking in the rain."
+        ]
+      },
+      {
+        "word": "fate",
+        "definition": "The future that will happen to someone or something, especially when it seems beyond control.",
+        "examples": [
+          "They worried about the fate of their missing friend.",
+          "No one knew the fate of the old house after the storm."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The stuffies beg Lamunda for help, desperate to find the stolen blanket."
+      },
+      {
+        "type": "blank",
+        "text": "Lamunda warns the blanket’s fate is uncertain."
+      },
+      {
+        "type": "blank",
+        "text": "She says Crepitus may detect its presence already."
+      },
+      {
+        "type": "anchor",
+        "text": "The blanket is seen in the cluttered marketplace."
+      },
+      {
+        "type": "blank",
+        "text": "They must retrieve it before Knuckle or the crawlies intervene."
+      }
+    ],
+    "distractors": [
+      "Lamunda claims the blanket was never stolen.",
+      "The blanket is discovered safely hidden inside their own pockets.",
+      "A friendly resident delivers the blanket to them immediately."
+    ]
+  }
+}

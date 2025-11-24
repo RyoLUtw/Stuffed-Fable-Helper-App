@@ -1,0 +1,111 @@
+{
+  "narrative": {
+    "title": "Scene 15-1 — Arrival in Squalor",
+    "paragraphs": [
+      "The stuffies stepped into Squalor, a chaotic town built from a maze of alleyways. The towering fortress dominated the distant skyline, that cast long shadows across the cluttered market stalls. Citizens and residents moved quickly, keeping to themselves as if afraid to be noticed. Lumpy watched the gathering crowd ahead and knew they had to push forward."
+    ],
+    "vocabulary": [
+      {
+        "word": "chaotic",
+        "definition": "Very disorganized or full of confusion, with no clear order.",
+        "examples": [
+          "The hallway became chaotic when all the students ran out at once.",
+          "His desk was so chaotic that he couldn’t find anything he needed."
+        ]
+      },
+      {
+        "word": "maze",
+        "definition": "A set of paths arranged in a confusing way, making it hard to find your way.",
+        "examples": [
+          "The hedge garden was shaped like a giant maze.",
+          "She felt like the old library was a maze of shelves and corners."
+        ]
+      },
+      {
+        "word": "alleyways",
+        "definition": "Narrow passages or small streets between buildings.",
+        "examples": [
+          "They walked through the alleyways to avoid the crowded main road.",
+          "The cat disappeared into the dark alleyways behind the shops."
+        ]
+      },
+      {
+        "word": "dominate",
+        "definition": "To rise over or control something by being very large, strong, or noticeable.",
+        "examples": [
+          "A tall mountain seemed to dominate the entire landscape.",
+          "The tower dominated the skyline, visible from miles away."
+        ]
+      },
+      {
+        "word": "fortress",
+        "definition": "A strong, heavily protected building used for defense.",
+        "examples": [
+          "Soldiers gathered inside the fortress as the storm approached.",
+          "The old fortress looked impossible to break into."
+        ]
+      },
+      {
+        "word": "citizens",
+        "definition": "People who live in or belong to a particular town or country.",
+        "examples": [
+          "The citizens voted on the new law.",
+          "Citizens gathered in the square to celebrate the festival."
+        ]
+      },
+      {
+        "word": "residents",
+        "definition": "People who live in a particular place.",
+        "examples": [
+          "The residents of the village knew each other well.",
+          "New residents moved into the apartment next door."
+        ]
+      },
+      {
+        "word": "cluttered",
+        "definition": "Filled with too many things so that it looks messy or crowded.",
+        "examples": [
+          "His room was so cluttered he could barely walk inside.",
+          "A cluttered desk made it hard for her to focus."
+        ]
+      },
+      {
+        "word": "cast",
+        "definition": "To throw or send something out, such as light, a shadow, or an object.",
+        "examples": [
+          "The lamp cast a warm glow across the room.",
+          "The tree cast a long shadow over the path."
+        ]
+      }
+    ]
+  },
+  "timeline": {
+    "events": [
+      {
+        "type": "anchor",
+        "text": "The stuffies arrive in the chaotic town of Squalor."
+      },
+      {
+        "type": "blank",
+        "text": "They observe ramshackle buildings and twisting alleyways."
+      },
+      {
+        "type": "blank",
+        "text": "A dark fortress dominates the distant skyline."
+      },
+      {
+        "type": "anchor",
+        "text": "The stuffies watch citizens and residents moving defensively."
+      },
+      {
+        "type": "blank",
+        "text": "Lumpy notices many toys gathering around a cluttered marketplace."
+      }
+    ],
+    "distractors": [
+      "The stuffies find a calm garden hidden behind Squalor’s train yard.",
+      "A friendly guide welcomes them and offers a tour of Squalor.",
+      "The fortress appears bright and welcoming with open gates."
+    ]
+  }
+}
