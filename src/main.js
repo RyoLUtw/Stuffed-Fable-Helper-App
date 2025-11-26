@@ -604,21 +604,19 @@ function saveGameplayProgress() {
       session.gameplay = getGameplaySnapshot();
       return session;
     });
-    return;
-  }
-
-  if (!storageAvailable()) {
+    scheduleDriveAutosave('teacher', state.selectedTeacherSessionId);
     return;
   }
 
   const payload = getGameplaySnapshot();
 
-  const success = attemptStorageWrite(() => {
-    window.localStorage.setItem(STORAGE_KEYS.gameplay, JSON.stringify(payload));
-  });
-  if (!success) {
-    console.warn('Unable to persist gameplay progress.');
-    return;
+  if (storageAvailable()) {
+    const success = attemptStorageWrite(() => {
+      window.localStorage.setItem(STORAGE_KEYS.gameplay, JSON.stringify(payload));
+    });
+    if (!success) {
+      console.warn('Unable to persist gameplay progress.');
+    }
   }
 
   scheduleDriveAutosave('student');
