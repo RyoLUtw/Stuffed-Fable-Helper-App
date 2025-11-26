@@ -1,7 +1,5 @@
 const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
-const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
 const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
-const GOOGLE_DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 
 const CHARACTER_NAMES = ['Lumpy', 'Flops', 'Theadora', 'Stitch', 'Piggle', 'Lionel'];
 const DIE_OPTIONS = [
@@ -121,8 +119,9 @@ const state = {
 const driveAutosaveTimers = {};
 const driveBackupMetadata = { teacher: {}, student: {} };
 let googleScriptsLoaded = false;
-let googleClientReady = false;
 let googleTokenClient = null;
+let googleAccessToken = null;
+let googleTokenExpiresAt = 0;
 
 const app = document.getElementById('app');
 
@@ -202,32 +201,12 @@ async function ensureGoogleApisLoaded() {
     return;
   }
 
-  await Promise.all([
-    loadExternalScript('https://accounts.google.com/gsi/client'),
-    loadExternalScript('https://apis.google.com/js/api.js'),
-  ]);
-
+  await loadExternalScript('https://accounts.google.com/gsi/client');
   googleScriptsLoaded = true;
 }
 
-async function ensureGoogleClient() {
-  if (googleClientReady) {
-    return;
-  }
-
+async function requestGoogleAccessToken(forcePrompt = false) {
   await ensureGoogleApisLoaded();
-
-  await new Promise((resolve, reject) => {
-    window.gapi.load('client', {
-      callback: resolve,
-      onerror: () => reject(new Error('Failed to load Google API client.')),
-    });
-  });
-
-  await window.gapi.client.init({
-    apiKey: GOOGLE_API_KEY,
-    discoveryDocs: GOOGLE_DISCOVERY_DOCS,
-  });
 
   if (!googleTokenClient) {
     googleTokenClient = window.google.accounts.oauth2.initTokenClient({
@@ -237,11 +216,7 @@ async function ensureGoogleClient() {
     });
   }
 
-  googleClientReady = true;
-}
-
-async function requestGoogleAccessToken() {
-  await ensureGoogleClient();
+  const shouldPrompt = forcePrompt || !googleAccessToken;
 
   return new Promise((resolve, reject) => {
     if (!googleTokenClient) {
@@ -249,18 +224,29 @@ async function requestGoogleAccessToken() {
       return;
     }
 
-    const existingToken = window.gapi.client.getToken?.();
     googleTokenClient.callback = (response) => {
       if (response.error) {
+        googleAccessToken = null;
+        googleTokenExpiresAt = 0;
         reject(new Error(response.error));
         return;
       }
-      window.gapi.client.setToken({ access_token: response.access_token });
+
+      googleAccessToken = response.access_token;
+      const expiresInMs = Number(response.expires_in) ? Number(response.expires_in) * 1000 : 45 * 60 * 1000;
+      googleTokenExpiresAt = Date.now() + expiresInMs;
       resolve(response.access_token);
     };
 
-    googleTokenClient.requestAccessToken({ prompt: existingToken ? '' : 'consent' });
+    googleTokenClient.requestAccessToken({ prompt: shouldPrompt ? 'consent' : '' });
   });
+}
+
+async function getValidGoogleAccessToken() {
+  if (googleAccessToken && Date.now() < googleTokenExpiresAt - 60000) {
+    return googleAccessToken;
+  }
+  return requestGoogleAccessToken();
 }
 
 function getTimelineStorageKey(sceneId) {
@@ -2512,25 +2498,66 @@ function buildDriveQuery(roleKey, slot, sessionKey) {
 }
 
 async function ensureDriveAccess() {
-  if (GOOGLE_CLIENT_ID.includes('YOUR_') || GOOGLE_API_KEY.includes('YOUR_')) {
-    throw new Error('Add your Google API credentials in src/main.js to enable Google Drive backups.');
+  if (GOOGLE_CLIENT_ID.includes('YOUR_')) {
+    throw new Error('Add your Google OAuth client ID in src/main.js to enable Google Drive backups.');
   }
 
-  await requestGoogleAccessToken();
+  await getValidGoogleAccessToken();
   state.googleAuth.connected = true;
   state.googleAuth.message = 'Connected to Google Drive';
 }
 
+async function driveRequest(path, { method = 'GET', params = {}, headers = {}, body = null, responseType = 'json', retry = true } = {}) {
+  const accessToken = await getValidGoogleAccessToken();
+  const url = new URL(`https://www.googleapis.com${path}`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  const response = await fetch(url.toString(), {
+    method,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...headers,
+    },
+    body,
+  });
+
+  if (response.status === 401 && retry) {
+    await requestGoogleAccessToken();
+    return driveRequest(path, { method, params, headers, body, responseType, retry: false });
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Drive request failed (${response.status}): ${errorText}`);
+  }
+
+  if (responseType === 'text') {
+    return response.text();
+  }
+
+  if (responseType === 'raw') {
+    return response;
+  }
+
+  return response.json();
+}
+
 async function findDriveBackupFile(roleKey, slot, sessionKey) {
   await ensureDriveAccess();
-  const response = await window.gapi.client.drive.files.list({
-    spaces: 'appDataFolder',
-    q: buildDriveQuery(roleKey, slot, sessionKey),
-    fields: 'files(id,name,modifiedTime)',
-    orderBy: 'modifiedTime desc',
-    pageSize: 1,
+  const response = await driveRequest('/drive/v3/files', {
+    params: {
+      spaces: 'appDataFolder',
+      q: buildDriveQuery(roleKey, slot, sessionKey),
+      fields: 'files(id,name,modifiedTime)',
+      orderBy: 'modifiedTime desc',
+      pageSize: 1,
+    },
   });
-  return response.result.files?.[0] ?? null;
+  return response.files?.[0] ?? null;
 }
 
 function createMultipartBody(metadata, data, boundary) {
@@ -2563,8 +2590,7 @@ async function upsertDriveBackup(slot, roleKey, sessionKey, payload) {
   };
   const boundary = `stuffed-fable-${Math.random().toString(36).slice(2)}`;
   const body = createMultipartBody(metadata, payload, boundary);
-  const response = await window.gapi.client.request({
-    path: existing ? `upload/drive/v3/files/${existing.id}` : 'upload/drive/v3/files',
+  const response = await driveRequest(existing ? `/upload/drive/v3/files/${existing.id}` : '/upload/drive/v3/files', {
     method: existing ? 'PATCH' : 'POST',
     params: {
       uploadType: 'multipart',
@@ -2576,7 +2602,7 @@ async function upsertDriveBackup(slot, roleKey, sessionKey, payload) {
     body,
   });
 
-  const modifiedTime = response.result.modifiedTime ? Date.parse(response.result.modifiedTime) : Date.now();
+  const modifiedTime = response.modifiedTime ? Date.parse(response.modifiedTime) : Date.now();
   setDriveBackupMetadataEntry(roleKey, sessionKey, slot, modifiedTime);
   return { updatedAt: modifiedTime, data: payload };
 }
@@ -2591,19 +2617,18 @@ async function downloadDriveBackup(slot, roleKey, sessionKey) {
   }
 
   const [metaResponse, contentResponse] = await Promise.all([
-    window.gapi.client.drive.files.get({
-      fileId: file.id,
-      fields: 'id,modifiedTime',
-    }),
-    window.gapi.client.drive.files.get({
-      fileId: file.id,
-      alt: 'media',
-    }),
+    driveRequest(`/drive/v3/files/${file.id}`, { params: { fields: 'id,modifiedTime' } }),
+    driveRequest(`/drive/v3/files/${file.id}`, { params: { alt: 'media' }, responseType: 'text' }),
   ]);
 
-  const content = contentResponse.body ?? contentResponse.result ?? null;
-  const parsed = typeof content === 'string' ? JSON.parse(content) : content;
-  const modifiedTime = metaResponse.result.modifiedTime ? Date.parse(metaResponse.result.modifiedTime) : Date.now();
+  let parsed = null;
+  try {
+    parsed = contentResponse ? JSON.parse(contentResponse) : null;
+  } catch (error) {
+    console.error('Failed to parse Drive backup', error);
+    throw new Error('Invalid Drive backup content.');
+  }
+  const modifiedTime = metaResponse.modifiedTime ? Date.parse(metaResponse.modifiedTime) : Date.now();
   setDriveBackupMetadataEntry(roleKey, sessionKey, slot, modifiedTime);
   return {
     updatedAt: modifiedTime,
@@ -2833,8 +2858,8 @@ async function backupSessionsToDrive(ids) {
 }
 
 async function handleGoogleLogin() {
-  if (GOOGLE_CLIENT_ID.includes('YOUR_') || GOOGLE_API_KEY.includes('YOUR_')) {
-    alert('Add your Google API credentials in src/main.js to enable Google Drive backups.');
+  if (GOOGLE_CLIENT_ID.includes('YOUR_')) {
+    alert('Add your Google OAuth client ID in src/main.js to enable Google Drive backups.');
     return;
   }
 
@@ -2842,8 +2867,7 @@ async function handleGoogleLogin() {
   renderContent();
 
   try {
-    await ensureGoogleClient();
-    await requestGoogleAccessToken();
+    await ensureDriveAccess();
     state.googleAuth.connected = true;
     state.googleAuth.message = 'Connected to Google Drive';
     scheduleDriveAutosave('teacher');
