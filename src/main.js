@@ -1,6 +1,7 @@
 const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
 const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
-const GOOGLE_APP_ID = 'YOUR_GOOGLE_APP_ID';
+const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+const GOOGLE_DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 
 const CHARACTER_NAMES = ['Lumpy', 'Flops', 'Theadora', 'Stitch', 'Piggle', 'Lionel'];
 const DIE_OPTIONS = [
@@ -118,6 +119,10 @@ const state = {
 };
 
 const driveAutosaveTimers = {};
+const driveBackupMetadata = { teacher: {}, student: {} };
+let googleScriptsLoaded = false;
+let googleClientReady = false;
+let googleTokenClient = null;
 
 const app = document.getElementById('app');
 
@@ -173,6 +178,89 @@ function storageAvailable() {
     console.warn('Local storage is unavailable.', error);
     return false;
   }
+}
+
+function loadExternalScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureGoogleApisLoaded() {
+  if (googleScriptsLoaded) {
+    return;
+  }
+
+  await Promise.all([
+    loadExternalScript('https://accounts.google.com/gsi/client'),
+    loadExternalScript('https://apis.google.com/js/api.js'),
+  ]);
+
+  googleScriptsLoaded = true;
+}
+
+async function ensureGoogleClient() {
+  if (googleClientReady) {
+    return;
+  }
+
+  await ensureGoogleApisLoaded();
+
+  await new Promise((resolve, reject) => {
+    window.gapi.load('client', {
+      callback: resolve,
+      onerror: () => reject(new Error('Failed to load Google API client.')),
+    });
+  });
+
+  await window.gapi.client.init({
+    apiKey: GOOGLE_API_KEY,
+    discoveryDocs: GOOGLE_DISCOVERY_DOCS,
+  });
+
+  if (!googleTokenClient) {
+    googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: GOOGLE_SCOPES,
+      callback: () => {},
+    });
+  }
+
+  googleClientReady = true;
+}
+
+async function requestGoogleAccessToken() {
+  await ensureGoogleClient();
+
+  return new Promise((resolve, reject) => {
+    if (!googleTokenClient) {
+      reject(new Error('Google token client unavailable.'));
+      return;
+    }
+
+    const existingToken = window.gapi.client.getToken?.();
+    googleTokenClient.callback = (response) => {
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+      window.gapi.client.setToken({ access_token: response.access_token });
+      resolve(response.access_token);
+    };
+
+    googleTokenClient.requestAccessToken({ prompt: existingToken ? '' : 'consent' });
+  });
 }
 
 function getTimelineStorageKey(sceneId) {
@@ -606,14 +694,14 @@ function sanitizeLostCard(card) {
   };
 }
 
-function persistTeacherSessions() {
+function persistTeacherSessions(updatedSessionId = null) {
   if (!storageAvailable()) {
     return;
   }
 
   try {
     window.localStorage.setItem(STORAGE_KEYS.teacherSessions, JSON.stringify(state.teacherSessions));
-    scheduleDriveAutosave('teacher');
+    scheduleDriveAutosave('teacher', updatedSessionId ?? state.selectedTeacherSessionId);
   } catch (error) {
     console.warn('Unable to save teacher sessions.', error);
   }
@@ -644,7 +732,7 @@ function deleteTeacherSession(sessionId) {
     state.selectedTeacherSessionId = null;
   }
 
-  persistTeacherSessions();
+  persistTeacherSessions(sessionId);
   return true;
 }
 
@@ -668,7 +756,7 @@ function updateActiveTeacherSession(updater) {
     }
   }
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
 }
 
 function hydrateFromStorage() {
@@ -1413,7 +1501,7 @@ function renderTeacherHome(container) {
 
   const driveMeta = document.createElement('span');
   driveMeta.className = 'muted-text';
-  const { autosave, manual } = getDriveBackupMetadata('teacher');
+  const { autosave, manual } = getDriveBackupMetadata('teacher', state.selectedTeacherSessionId);
   driveMeta.textContent = `Autosave: ${formatBackupTimestamp(autosave)} · Manual: ${formatBackupTimestamp(manual)}`;
 
   actions.append(addButton, downloadButton, googleButton, manualDriveButton, loadDriveButton, status, driveMeta);
@@ -1670,7 +1758,7 @@ function handleCreateSession() {
   const name = input?.value?.trim() ?? '';
   const session = createTeacherSession(name);
   state.teacherSessions = [...state.teacherSessions, session];
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('sessionModal');
   renderContent();
 }
@@ -1794,7 +1882,7 @@ function setTeacherSceneStatus(status, sceneId = state.selectedSceneId) {
     session.sceneProgress[sceneId] = status;
   }
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
 }
 
 function applySceneChange(sceneId) {
@@ -2088,7 +2176,7 @@ function handleSleepCardSave() {
     session.sleepCards.push({ id: `sleep-${Date.now()}`, status: state.pendingSleepStatus });
   }
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('sleepCardModal');
   renderContent();
 }
@@ -2105,7 +2193,7 @@ function handleSleepCardDelete() {
   }
   session.sleepCards = session.sleepCards.filter((card) => card.id !== state.activeSleepCardId);
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('sleepCardModal');
   renderContent();
 }
@@ -2167,7 +2255,7 @@ function handleLostCardSave() {
     session.lostCards.push({ id: `lost-${Date.now()}`, name });
   }
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('lostCardModal');
   renderContent();
 }
@@ -2184,7 +2272,7 @@ function handleLostCardDelete() {
   }
   session.lostCards = session.lostCards.filter((card) => card.id !== state.activeLostCardId);
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('lostCardModal');
   renderContent();
 }
@@ -2325,17 +2413,13 @@ function getZipTimestamp() {
   return { time, date };
 }
 
-function handleDriveBackup() {
-  if (!state.googleAuth.connected) {
-    alert('Log in with Google to enable Drive backups.');
-    return;
-  }
+async function handleDriveBackup() {
   const ids = getSelectedDownloadSessionIds();
   if (ids.length === 0) {
     alert('Select at least one session to back up.');
     return;
   }
-  backupSessionsToDrive(ids);
+  await backupSessionsToDrive(ids);
   closeModal('downloadModal');
 }
 
@@ -2343,32 +2427,29 @@ function getDriveRoleKey() {
   return state.role === 'teacher' ? 'teacher' : 'student';
 }
 
-function getDriveBackupStore() {
-  if (!storageAvailable()) {
-    return {};
+function getDriveSessionKey(roleKey = getDriveRoleKey(), sessionId = null) {
+  if (roleKey === 'teacher') {
+    return sessionId ?? state.selectedTeacherSessionId;
   }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEYS.driveBackups);
-    if (!raw) {
-      return {};
-    }
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (error) {
-    console.warn('Unable to read Drive backups.', error);
-    return {};
-  }
+  return 'student';
 }
 
-function persistDriveBackupStore(store) {
-  if (!storageAvailable()) {
-    return;
+function setDriveBackupMetadataEntry(roleKey, sessionKey, slot, updatedAt) {
+  if (!driveBackupMetadata[roleKey]) {
+    driveBackupMetadata[roleKey] = {};
   }
-  try {
-    window.localStorage.setItem(STORAGE_KEYS.driveBackups, JSON.stringify(store));
-  } catch (error) {
-    console.warn('Unable to persist Drive backups.', error);
+  if (!driveBackupMetadata[roleKey][sessionKey]) {
+    driveBackupMetadata[roleKey][sessionKey] = { autosave: null, manual: null };
   }
+  driveBackupMetadata[roleKey][sessionKey][slot] = updatedAt
+    ? { updatedAt }
+    : null;
+}
+
+function getDriveBackupMetadata(roleKey = getDriveRoleKey(), sessionId = null) {
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  const entry = driveBackupMetadata[roleKey]?.[sessionKey];
+  return entry || { autosave: null, manual: null };
 }
 
 function cloneSessionForBackup(session) {
@@ -2385,10 +2466,14 @@ function cloneSessionForBackup(session) {
   };
 }
 
-function getTeacherDrivePayload() {
+function getTeacherDrivePayload(sessionId = null) {
+  const sessionKey = sessionId ?? state.selectedTeacherSessionId;
+  const session = state.teacherSessions.find((entry) => entry.id === sessionKey);
+  if (!session) {
+    throw new Error('Select a teacher session before saving to Drive.');
+  }
   return {
-    teacherSessions: state.teacherSessions.map((session) => cloneSessionForBackup(session)).filter(Boolean),
-    selectedTeacherSessionId: state.selectedTeacherSessionId,
+    session: cloneSessionForBackup(session),
   };
 }
 
@@ -2398,68 +2483,189 @@ function getStudentDrivePayload() {
   };
 }
 
-function getDrivePayloadByRole(roleKey) {
-  return roleKey === 'teacher' ? getTeacherDrivePayload() : getStudentDrivePayload();
+function getDrivePayloadByRole(roleKey, sessionKey = null) {
+  return roleKey === 'teacher' ? getTeacherDrivePayload(sessionKey) : getStudentDrivePayload();
 }
 
-function writeDriveBackup(roleKey, slot, payload) {
-  const store = getDriveBackupStore();
-  if (!store[roleKey]) {
-    store[roleKey] = {};
+function getDriveFileName(roleKey, slot, sessionKey) {
+  if (roleKey === 'teacher') {
+    return `stuffed-fable-teacher-${sessionKey}-${slot}.json`;
+  }
+  return `stuffed-fable-student-${slot}.json`;
+}
+
+function getDriveAppProperties(roleKey, slot, sessionKey) {
+  return {
+    app: 'stuffed-fable-helper',
+    role: roleKey,
+    slot,
+    sessionKey: sessionKey ?? 'student',
+  };
+}
+
+function buildDriveQuery(roleKey, slot, sessionKey) {
+  const props = getDriveAppProperties(roleKey, slot, sessionKey);
+  const segments = Object.entries(props).map(
+    ([key, value]) => `appProperties has { key='${key}' and value='${value}' }`
+  );
+  return `${segments.join(' and ')} and trashed = false`;
+}
+
+async function ensureDriveAccess() {
+  if (GOOGLE_CLIENT_ID.includes('YOUR_') || GOOGLE_API_KEY.includes('YOUR_')) {
+    throw new Error('Add your Google API credentials in src/main.js to enable Google Drive backups.');
   }
 
-  store[roleKey][slot] = {
-    type: roleKey,
-    updatedAt: Date.now(),
-    data: payload,
+  await requestGoogleAccessToken();
+  state.googleAuth.connected = true;
+  state.googleAuth.message = 'Connected to Google Drive';
+}
+
+async function findDriveBackupFile(roleKey, slot, sessionKey) {
+  await ensureDriveAccess();
+  const response = await window.gapi.client.drive.files.list({
+    spaces: 'appDataFolder',
+    q: buildDriveQuery(roleKey, slot, sessionKey),
+    fields: 'files(id,name,modifiedTime)',
+    orderBy: 'modifiedTime desc',
+    pageSize: 1,
+  });
+  return response.result.files?.[0] ?? null;
+}
+
+function createMultipartBody(metadata, data, boundary) {
+  const delimiter = `--${boundary}`;
+  const closeDelimiter = `--${boundary}--`;
+  return [
+    delimiter,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    JSON.stringify(metadata),
+    delimiter,
+    'Content-Type: application/json',
+    '',
+    JSON.stringify(data),
+    closeDelimiter,
+    '',
+  ].join('\r\n');
+}
+
+async function upsertDriveBackup(slot, roleKey, sessionKey, payload) {
+  if (!sessionKey) {
+    throw new Error('Select a session before saving to Drive.');
+  }
+
+  const existing = await findDriveBackupFile(roleKey, slot, sessionKey);
+  const metadata = {
+    name: getDriveFileName(roleKey, slot, sessionKey),
+    parents: ['appDataFolder'],
+    appProperties: getDriveAppProperties(roleKey, slot, sessionKey),
   };
+  const boundary = `stuffed-fable-${Math.random().toString(36).slice(2)}`;
+  const body = createMultipartBody(metadata, payload, boundary);
+  const response = await window.gapi.client.request({
+    path: existing ? `upload/drive/v3/files/${existing.id}` : 'upload/drive/v3/files',
+    method: existing ? 'PATCH' : 'POST',
+    params: {
+      uploadType: 'multipart',
+      fields: 'id,modifiedTime',
+    },
+    headers: {
+      'Content-Type': `multipart/related; boundary=${boundary}`,
+    },
+    body,
+  });
 
-  persistDriveBackupStore(store);
+  const modifiedTime = response.result.modifiedTime ? Date.parse(response.result.modifiedTime) : Date.now();
+  setDriveBackupMetadataEntry(roleKey, sessionKey, slot, modifiedTime);
+  return { updatedAt: modifiedTime, data: payload };
 }
 
-function readDriveBackup(roleKey, slot) {
-  const store = getDriveBackupStore();
-  return store?.[roleKey]?.[slot] ?? null;
+async function downloadDriveBackup(slot, roleKey, sessionKey) {
+  if (!sessionKey) {
+    throw new Error('Select a session before loading from Drive.');
+  }
+  const file = await findDriveBackupFile(roleKey, slot, sessionKey);
+  if (!file) {
+    return null;
+  }
+
+  const [metaResponse, contentResponse] = await Promise.all([
+    window.gapi.client.drive.files.get({
+      fileId: file.id,
+      fields: 'id,modifiedTime',
+    }),
+    window.gapi.client.drive.files.get({
+      fileId: file.id,
+      alt: 'media',
+    }),
+  ]);
+
+  const content = contentResponse.body ?? contentResponse.result ?? null;
+  const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+  const modifiedTime = metaResponse.result.modifiedTime ? Date.parse(metaResponse.result.modifiedTime) : Date.now();
+  setDriveBackupMetadataEntry(roleKey, sessionKey, slot, modifiedTime);
+  return {
+    updatedAt: modifiedTime,
+    data: parsed,
+  };
 }
 
-function scheduleDriveAutosave(roleKey = getDriveRoleKey()) {
-  if (!state.googleAuth.connected || !storageAvailable()) {
+function scheduleDriveAutosave(roleKey = getDriveRoleKey(), sessionId = null) {
+  if (!state.googleAuth.connected) {
     return;
   }
 
-  if (driveAutosaveTimers[roleKey]) {
-    clearTimeout(driveAutosaveTimers[roleKey]);
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  if (roleKey === 'teacher' && !sessionKey) {
+    return;
+  }
+  const timerKey = `${roleKey}:${sessionKey ?? 'none'}`;
+  if (driveAutosaveTimers[timerKey]) {
+    clearTimeout(driveAutosaveTimers[timerKey]);
   }
 
-  driveAutosaveTimers[roleKey] = setTimeout(() => {
-    performDriveSave('autosave', roleKey);
+  driveAutosaveTimers[timerKey] = setTimeout(() => {
+    performDriveSave('autosave', roleKey, sessionKey);
   }, 400);
 }
 
-function performDriveSave(slot, roleKey = getDriveRoleKey()) {
+async function performDriveSave(slot, roleKey = getDriveRoleKey(), sessionId = null) {
   if (!state.googleAuth.connected) {
     return;
   }
-  const payload = getDrivePayloadByRole(roleKey);
-  writeDriveBackup(roleKey, slot, payload);
-}
-
-function getDriveBackupMetadata(roleKey = getDriveRoleKey()) {
-  const autosave = readDriveBackup(roleKey, 'autosave');
-  const manual = readDriveBackup(roleKey, 'manual');
-  return { autosave, manual };
-}
-
-function handleManualDriveSave() {
-  if (!state.googleAuth.connected) {
-    alert('Log in with Google to enable Drive backups.');
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  if (roleKey === 'teacher' && !sessionKey) {
     return;
   }
+  try {
+    const payload = getDrivePayloadByRole(roleKey, sessionKey);
+    await upsertDriveBackup(slot, roleKey, sessionKey, payload);
+  } catch (error) {
+    console.error('Drive save failed', error);
+    state.googleAuth.message = 'Drive save failed';
+    renderContent();
+  }
+}
 
+async function handleManualDriveSave() {
   const roleKey = getDriveRoleKey();
-  const payload = getDrivePayloadByRole(roleKey);
-  writeDriveBackup(roleKey, 'manual', payload);
-  alert('Manual save uploaded to Drive.');
+  const sessionKey = getDriveSessionKey(roleKey);
+
+  if (roleKey === 'teacher' && !sessionKey) {
+    alert('Open a teacher session to save to Drive.');
+    return;
+  }
+
+  try {
+    await ensureDriveAccess();
+    const payload = getDrivePayloadByRole(roleKey, sessionKey);
+    await upsertDriveBackup('manual', roleKey, sessionKey, payload);
+    alert('Manual save uploaded to Drive.');
+  } catch (error) {
+    console.error('Manual Drive save failed', error);
+    alert('Unable to save to Google Drive. Check your connection and credentials.');
+  }
 }
 
 function describeDifferences(autosave, manual) {
@@ -2508,22 +2714,26 @@ function renderDriveConflictModal(autosave, manual) {
 }
 
 function applyTeacherDrivePayload(payload) {
-  if (!payload || !Array.isArray(payload.teacherSessions)) {
+  if (!payload || typeof payload !== 'object' || !payload.session) {
     throw new Error('Invalid teacher backup payload.');
   }
 
-  state.teacherSessions = payload.teacherSessions.map((session) => sanitizeTeacherSession(session)).filter(Boolean);
-  state.selectedTeacherSessionId = payload.selectedTeacherSessionId;
-  if (!state.teacherSessions.find((session) => session.id === state.selectedTeacherSessionId)) {
-    state.selectedTeacherSessionId = null;
+  const session = sanitizeTeacherSession(payload.session);
+  if (!session) {
+    throw new Error('Invalid teacher session data.');
   }
 
-  persistTeacherSessions();
-  if (state.teacherView === 'session' && state.selectedTeacherSessionId) {
-    const session = getActiveTeacherSession();
-    if (session?.gameplay) {
-      applyGameplayState(session.gameplay);
-    }
+  const index = state.teacherSessions.findIndex((entry) => entry.id === session.id);
+  if (index >= 0) {
+    state.teacherSessions[index] = session;
+  } else {
+    state.teacherSessions = [...state.teacherSessions, session];
+  }
+
+  state.selectedTeacherSessionId = session.id;
+  persistTeacherSessions(session.id);
+  if (state.teacherView === 'session') {
+    applyGameplayState(session.gameplay ?? getDefaultGameplaySnapshot());
   }
 }
 
@@ -2535,9 +2745,9 @@ function applyStudentDrivePayload(payload) {
   saveGameplayProgress();
 }
 
-function applyDrivePayload(roleKey, payload) {
+function applyDrivePayload(roleKey, payload, sessionKey = null) {
   if (roleKey === 'teacher') {
-    applyTeacherDrivePayload(payload);
+    applyTeacherDrivePayload(payload, sessionKey);
   } else {
     applyStudentDrivePayload(payload);
   }
@@ -2547,34 +2757,42 @@ function applyDrivePayload(roleKey, payload) {
   renderContent();
 }
 
-function handleDriveLoadRequest() {
-  if (!state.googleAuth.connected) {
-    alert('Log in with Google to enable Drive backups.');
-    return;
-  }
-
+async function handleDriveLoadRequest() {
   const roleKey = getDriveRoleKey();
-  const autosave = readDriveBackup(roleKey, 'autosave');
-  const manual = readDriveBackup(roleKey, 'manual');
-
-  if (!autosave && !manual) {
-    alert('No Drive backups available for this view.');
+  const sessionKey = getDriveSessionKey(roleKey);
+  if (roleKey === 'teacher' && !sessionKey) {
+    alert('Open a teacher session to load backups.');
     return;
   }
 
-  if (autosave && manual) {
-    const autosaveSerialized = stableStringify(autosave.data ?? {});
-    const manualSerialized = stableStringify(manual.data ?? {});
-    if (autosaveSerialized !== manualSerialized) {
-      state.pendingDriveLoad = { roleKey, autosave, manual };
-      renderDriveConflictModal(autosave, manual);
-      openModal('driveConflictModal');
+  try {
+    const [autosave, manual] = await Promise.all([
+      downloadDriveBackup('autosave', roleKey, sessionKey),
+      downloadDriveBackup('manual', roleKey, sessionKey),
+    ]);
+
+    if (!autosave && !manual) {
+      alert('No Drive backups available for this view.');
       return;
     }
-  }
 
-  const payload = (manual ?? autosave)?.data;
-  applyDrivePayload(roleKey, payload);
+    if (autosave && manual) {
+      const autosaveSerialized = stableStringify(autosave.data ?? {});
+      const manualSerialized = stableStringify(manual.data ?? {});
+      if (autosaveSerialized !== manualSerialized) {
+        state.pendingDriveLoad = { roleKey, sessionKey, autosave, manual };
+        renderDriveConflictModal(autosave, manual);
+        openModal('driveConflictModal');
+        return;
+      }
+    }
+
+    const payload = (manual ?? autosave)?.data;
+    applyDrivePayload(roleKey, payload, sessionKey);
+  } catch (error) {
+    console.error('Drive load failed', error);
+    alert('Unable to load from Google Drive.');
+  }
 }
 
 function confirmDriveLoad(choice) {
@@ -2583,40 +2801,60 @@ function confirmDriveLoad(choice) {
     return;
   }
 
-  const { roleKey, autosave, manual } = state.pendingDriveLoad;
+  const { roleKey, sessionKey, autosave, manual } = state.pendingDriveLoad;
   const selected = choice === 'manual' ? manual : autosave;
   if (!selected) {
     closeModal('driveConflictModal');
     return;
   }
 
-  applyDrivePayload(roleKey, selected.data);
+  applyDrivePayload(roleKey, selected.data, sessionKey);
   state.pendingDriveLoad = null;
   closeModal('driveConflictModal');
 }
 
-function backupSessionsToDrive(ids) {
-  const payload = state.teacherSessions.filter((session) => ids.includes(session.id));
-  writeDriveBackup('teacher', 'manual', {
-    teacherSessions: payload.map((session) => cloneSessionForBackup(session)).filter(Boolean),
-    selectedTeacherSessionId: state.selectedTeacherSessionId,
-  });
-  alert('Selected sessions saved to Drive (manual slot).');
+async function backupSessionsToDrive(ids) {
+  if (!ids.length) {
+    return;
+  }
+  try {
+    await ensureDriveAccess();
+    await Promise.all(
+      ids.map(async (id) => {
+        const payload = getTeacherDrivePayload(id);
+        await upsertDriveBackup('manual', 'teacher', id, payload);
+      })
+    );
+    alert('Selected sessions saved to Drive (manual slot).');
+  } catch (error) {
+    console.error('Bulk Drive backup failed', error);
+    alert('Unable to save selected sessions to Google Drive.');
+  }
 }
 
-function handleGoogleLogin() {
+async function handleGoogleLogin() {
   if (GOOGLE_CLIENT_ID.includes('YOUR_') || GOOGLE_API_KEY.includes('YOUR_')) {
     alert('Add your Google API credentials in src/main.js to enable Google Drive backups.');
     return;
   }
-  state.googleAuth.connected = !state.googleAuth.connected;
-  state.googleAuth.message = state.googleAuth.connected
-    ? 'Connected to Google Drive (simulated).'
-    : 'Not connected';
-  if (state.googleAuth.connected) {
+
+  state.googleAuth.message = 'Connecting to Google…';
+  renderContent();
+
+  try {
+    await ensureGoogleClient();
+    await requestGoogleAccessToken();
+    state.googleAuth.connected = true;
+    state.googleAuth.message = 'Connected to Google Drive';
     scheduleDriveAutosave('teacher');
     scheduleDriveAutosave('student');
+  } catch (error) {
+    console.error('Google login failed', error);
+    state.googleAuth.connected = false;
+    state.googleAuth.message = 'Google sign-in failed';
+    alert('Unable to connect to Google Drive.');
   }
+
   renderContent();
 }
 
