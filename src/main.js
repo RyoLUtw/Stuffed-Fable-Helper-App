@@ -32,6 +32,7 @@ const STORAGE_KEYS = {
   gameplay: 'stuffed-fable/gameplay',
   timelinePrefix: 'stuffed-fable/timeline/',
   teacherSessions: 'stuffed-fable/teacher/sessions',
+  deletedTeacherSessions: 'stuffed-fable/teacher/deleted-sessions',
   driveBackups: 'stuffed-fable/drive/backups',
   googleAuth: 'stuffed-fable/google/auth',
 };
@@ -117,6 +118,7 @@ const state = {
   pendingDriveLoad: null,
   driveConflictQueue: [],
   driveSyncState: { teacher: {}, student: { student: 'saved' } },
+  deletedTeacherSessions: new Set(),
 };
 
 const driveAutosaveTimers = {};
@@ -700,6 +702,28 @@ function loadTeacherSessions() {
   }
 }
 
+function loadDeletedTeacherSessions() {
+  if (!storageAvailable()) {
+    return new Set();
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.deletedTeacherSessions);
+    if (!raw) {
+      return new Set();
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return new Set();
+    }
+    const ids = parsed.filter((entry) => typeof entry === 'string' && entry.trim());
+    return new Set(ids);
+  } catch (error) {
+    console.warn('Unable to load deleted teacher sessions.', error);
+    return new Set();
+  }
+}
+
 function sanitizeTeacherSession(entry) {
   if (!entry || typeof entry !== 'object') {
     return null;
@@ -738,6 +762,21 @@ function sanitizeLostCard(card) {
     id: typeof card.id === 'string' ? card.id : `lost-${Date.now()}`,
     name: typeof card.name === 'string' ? card.name : '',
   };
+}
+
+function persistDeletedTeacherSessions() {
+  if (!storageAvailable()) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      STORAGE_KEYS.deletedTeacherSessions,
+      JSON.stringify(Array.from(state.deletedTeacherSessions))
+    );
+  } catch (error) {
+    console.warn('Unable to save deleted teacher sessions.', error);
+  }
 }
 
 function persistTeacherSessions(updatedSessionId = null) {
@@ -779,7 +818,10 @@ function deleteTeacherSession(sessionId) {
     state.selectedTeacherSessionId = null;
   }
 
-  persistTeacherSessions(sessionId);
+  state.deletedTeacherSessions.add(sessionId);
+  persistTeacherSessions();
+  persistDeletedTeacherSessions();
+  cleanupDeletedTeacherSessionsFromDrive([sessionId]);
   return true;
 }
 
@@ -809,6 +851,7 @@ function updateActiveTeacherSession(updater) {
 function hydrateFromStorage() {
   hydrateGameplayState();
   state.teacherSessions = loadTeacherSessions();
+  state.deletedTeacherSessions = loadDeletedTeacherSessions();
 }
 
 async function init() {
@@ -2693,18 +2736,72 @@ async function findDriveBackupFile(roleKey, slot, sessionKey) {
   return response.files?.[0] ?? null;
 }
 
-async function listDriveBackups(roleKey, slot) {
+async function listDriveBackups(roleKey, slot, sessionKey = null) {
   await ensureDriveAccess({ allowSilent: true });
   const response = await driveRequest('/drive/v3/files', {
     params: {
       spaces: 'appDataFolder',
-      q: buildDriveQuery(roleKey, slot),
+      q: buildDriveQuery(roleKey, slot, sessionKey),
       fields: 'files(id,name,modifiedTime,appProperties)',
       orderBy: 'modifiedTime desc',
       pageSize: 1000,
     },
   });
   return response.files ?? [];
+}
+
+async function deleteDriveBackupsForSession(sessionId) {
+  if (!sessionId) {
+    return false;
+  }
+
+  try {
+    await ensureDriveAccess({ allowSilent: true });
+  } catch (error) {
+    console.warn('Unable to authorize Drive cleanup.', error);
+    return false;
+  }
+
+  const slots = ['autosave', 'manual'];
+  try {
+    await Promise.all(
+      slots.map(async (slot) => {
+        const files = await listDriveBackups('teacher', slot, sessionId);
+        await Promise.all(
+          files.map(async (file) => {
+            if (!file?.id) {
+              return;
+            }
+            try {
+              await driveRequest(`/drive/v3/files/${file.id}`, { method: 'DELETE', responseType: 'text' });
+            } catch (error) {
+              console.warn(`Unable to delete Drive backup ${file.id} (${slot})`, error);
+            }
+          })
+        );
+      })
+    );
+    return true;
+  } catch (error) {
+    console.warn('Unable to remove Drive backups for deleted session.', error);
+    return false;
+  }
+}
+
+async function cleanupDeletedTeacherSessionsFromDrive(sessionIds = Array.from(state.deletedTeacherSessions)) {
+  const ids = Array.from(new Set(sessionIds.filter((id) => typeof id === 'string' && id.trim())));
+  if (ids.length === 0) {
+    return;
+  }
+
+  for (const id of ids) {
+    const removed = await deleteDriveBackupsForSession(id);
+    if (removed) {
+      state.deletedTeacherSessions.delete(id);
+    }
+  }
+
+  persistDeletedTeacherSessions();
 }
 
 function createMultipartBody(metadata, data, boundary) {
@@ -2804,6 +2901,8 @@ async function resolveTeacherSessionKeys({ sessionKey = null, loadAll = false } 
       }
     });
   }
+
+  (state.deletedTeacherSessions ?? new Set()).forEach((deletedId) => keys.delete(deletedId));
 
   return Array.from(keys);
 }
@@ -3393,6 +3492,7 @@ async function startAutomaticDriveLoad() {
     return;
   }
 
+  await cleanupDeletedTeacherSessionsFromDrive();
   await loadDriveBackupsForRole('teacher', {
     loadAllTeacherSessions: true,
     preserveTeacherSelection: true,
