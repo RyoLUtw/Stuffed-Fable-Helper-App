@@ -1,6 +1,5 @@
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
-const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
-const GOOGLE_APP_ID = 'YOUR_GOOGLE_APP_ID';
+const GOOGLE_CLIENT_ID = '332987792434-u7r3hdl46asbqo0si3ngqu46kdbgf2at.apps.googleusercontent.com';
+const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
 
 const CHARACTER_NAMES = ['Lumpy', 'Flops', 'Theadora', 'Stitch', 'Piggle', 'Lionel'];
 const DIE_OPTIONS = [
@@ -33,6 +32,9 @@ const STORAGE_KEYS = {
   gameplay: 'stuffed-fable/gameplay',
   timelinePrefix: 'stuffed-fable/timeline/',
   teacherSessions: 'stuffed-fable/teacher/sessions',
+  deletedTeacherSessions: 'stuffed-fable/teacher/deleted-sessions',
+  driveBackups: 'stuffed-fable/drive/backups',
+  googleAuth: 'stuffed-fable/google/auth',
 };
 
 function createEmptyItemSlots() {
@@ -113,7 +115,74 @@ const state = {
   activeSleepCardId: null,
   pendingSleepStatus: 'sleeping',
   activeLostCardId: null,
+  pendingDriveLoad: null,
+  driveConflictQueue: [],
+  driveSyncState: { teacher: {}, student: { student: 'saved' } },
+  deletedTeacherSessions: new Set(),
 };
+
+const driveAutosaveTimers = {};
+const driveBackupMetadata = { teacher: {}, student: {} };
+let googleScriptsLoaded = false;
+let googleTokenClient = null;
+let googleAccessToken = null;
+let googleTokenExpiresAt = 0;
+let driveLoadInProgress = false;
+
+function persistGoogleToken() {
+  if (!storageAvailable() || !googleAccessToken || !Number.isFinite(googleTokenExpiresAt)) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      STORAGE_KEYS.googleAuth,
+      JSON.stringify({ token: googleAccessToken, expiresAt: googleTokenExpiresAt })
+    );
+  } catch (error) {
+    console.warn('Unable to persist Google token.', error);
+  }
+}
+
+function clearGoogleTokenStorage() {
+  if (!storageAvailable()) {
+    return;
+  }
+  try {
+    window.localStorage.removeItem(STORAGE_KEYS.googleAuth);
+  } catch (error) {
+    console.warn('Unable to clear Google token.', error);
+  }
+}
+
+function hydrateGoogleToken() {
+  if (!storageAvailable()) {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.googleAuth);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    const expiresAt = Number(parsed.expiresAt);
+    if (!parsed.token || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      return null;
+    }
+
+    googleAccessToken = parsed.token;
+    googleTokenExpiresAt = expiresAt;
+    return parsed;
+  } catch (error) {
+    console.warn('Unable to hydrate Google token.', error);
+    return null;
+  }
+}
 
 const app = document.getElementById('app');
 
@@ -171,6 +240,77 @@ function storageAvailable() {
   }
 }
 
+function loadExternalScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureGoogleApisLoaded() {
+  if (googleScriptsLoaded) {
+    return;
+  }
+
+  await loadExternalScript('https://accounts.google.com/gsi/client');
+  googleScriptsLoaded = true;
+}
+
+async function requestGoogleAccessToken(forcePrompt = false, allowSilent = false) {
+  await ensureGoogleApisLoaded();
+
+  if (!googleTokenClient) {
+    googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: GOOGLE_SCOPES,
+      callback: () => {},
+    });
+  }
+
+  const shouldPrompt = forcePrompt || (!googleAccessToken && !allowSilent);
+
+  return new Promise((resolve, reject) => {
+    if (!googleTokenClient) {
+      reject(new Error('Google token client unavailable.'));
+      return;
+    }
+
+    googleTokenClient.callback = (response) => {
+      if (response.error) {
+        googleAccessToken = null;
+        googleTokenExpiresAt = 0;
+        reject(new Error(response.error));
+        return;
+      }
+
+      googleAccessToken = response.access_token;
+      const expiresInMs = Number(response.expires_in) ? Number(response.expires_in) * 1000 : 45 * 60 * 1000;
+      googleTokenExpiresAt = Date.now() + expiresInMs;
+      persistGoogleToken();
+      resolve(response.access_token);
+    };
+
+    googleTokenClient.requestAccessToken({ prompt: shouldPrompt ? 'consent' : '' });
+  });
+}
+
+async function getValidGoogleAccessToken({ allowSilent = false } = {}) {
+  if (googleAccessToken && Date.now() < googleTokenExpiresAt - 60000) {
+    return googleAccessToken;
+  }
+  return requestGoogleAccessToken(false, allowSilent);
+}
+
 function getTimelineStorageKey(sceneId) {
   return `${STORAGE_KEYS.timelinePrefix}${sceneId}`;
 }
@@ -223,6 +363,55 @@ function attemptStorageWrite(writeFn, sceneIdToPreserve) {
   }
 
   return false;
+}
+
+function stableStringify(value) {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
+  }
+
+  const keys = Object.keys(value).sort();
+  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+}
+
+function listBackupDifferences(a, b, prefix = '') {
+  if (Object.is(a, b)) {
+    return [];
+  }
+
+  const label = prefix || 'value';
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
+    return [label];
+  }
+
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+      return [label];
+    }
+
+    const differences = [];
+    a.forEach((value, index) => {
+      differences.push(...listBackupDifferences(value, b[index], `${label}[${index}]`));
+    });
+    return differences;
+  }
+
+  const differences = [];
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  keys.forEach((key) => {
+    const nextPrefix = prefix ? `${prefix}.${key}` : key;
+    if (!(key in a) || !(key in b)) {
+      differences.push(nextPrefix);
+      return;
+    }
+    differences.push(...listBackupDifferences(a[key], b[key], nextPrefix));
+  });
+
+  return differences;
 }
 
 function saveTimelineProgress(sceneId) {
@@ -418,21 +607,24 @@ function saveGameplayProgress() {
       session.gameplay = getGameplaySnapshot();
       return session;
     });
-    return;
-  }
-
-  if (!storageAvailable()) {
+    scheduleDriveAutosave('teacher', state.selectedTeacherSessionId);
+    markDriveSyncDirty('teacher', state.selectedTeacherSessionId);
     return;
   }
 
   const payload = getGameplaySnapshot();
 
-  const success = attemptStorageWrite(() => {
-    window.localStorage.setItem(STORAGE_KEYS.gameplay, JSON.stringify(payload));
-  });
-  if (!success) {
-    console.warn('Unable to persist gameplay progress.');
+  if (storageAvailable()) {
+    const success = attemptStorageWrite(() => {
+      window.localStorage.setItem(STORAGE_KEYS.gameplay, JSON.stringify(payload));
+    });
+    if (!success) {
+      console.warn('Unable to persist gameplay progress.');
+    }
   }
+
+  scheduleDriveAutosave('student');
+  markDriveSyncDirty('student');
 }
 
 function getGameplaySnapshot() {
@@ -510,6 +702,28 @@ function loadTeacherSessions() {
   }
 }
 
+function loadDeletedTeacherSessions() {
+  if (!storageAvailable()) {
+    return new Set();
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.deletedTeacherSessions);
+    if (!raw) {
+      return new Set();
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return new Set();
+    }
+    const ids = parsed.filter((entry) => typeof entry === 'string' && entry.trim());
+    return new Set(ids);
+  } catch (error) {
+    console.warn('Unable to load deleted teacher sessions.', error);
+    return new Set();
+  }
+}
+
 function sanitizeTeacherSession(entry) {
   if (!entry || typeof entry !== 'object') {
     return null;
@@ -550,13 +764,30 @@ function sanitizeLostCard(card) {
   };
 }
 
-function persistTeacherSessions() {
+function persistDeletedTeacherSessions() {
+  if (!storageAvailable()) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      STORAGE_KEYS.deletedTeacherSessions,
+      JSON.stringify(Array.from(state.deletedTeacherSessions))
+    );
+  } catch (error) {
+    console.warn('Unable to save deleted teacher sessions.', error);
+  }
+}
+
+function persistTeacherSessions(updatedSessionId = null) {
   if (!storageAvailable()) {
     return;
   }
 
   try {
     window.localStorage.setItem(STORAGE_KEYS.teacherSessions, JSON.stringify(state.teacherSessions));
+    scheduleDriveAutosave('teacher', updatedSessionId ?? state.selectedTeacherSessionId);
+    markDriveSyncDirty('teacher', updatedSessionId ?? state.selectedTeacherSessionId);
   } catch (error) {
     console.warn('Unable to save teacher sessions.', error);
   }
@@ -587,7 +818,10 @@ function deleteTeacherSession(sessionId) {
     state.selectedTeacherSessionId = null;
   }
 
+  state.deletedTeacherSessions.add(sessionId);
   persistTeacherSessions();
+  persistDeletedTeacherSessions();
+  cleanupDeletedTeacherSessionsFromDrive([sessionId]);
   return true;
 }
 
@@ -611,18 +845,20 @@ function updateActiveTeacherSession(updater) {
     }
   }
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
 }
 
 function hydrateFromStorage() {
   hydrateGameplayState();
   state.teacherSessions = loadTeacherSessions();
+  state.deletedTeacherSessions = loadDeletedTeacherSessions();
 }
 
 async function init() {
   renderBaseLayout();
   setupTeacherControls();
   hydrateFromStorage();
+  hydrateGoogleToken();
   await loadScenes();
 
   if (state.scenes.length > 0) {
@@ -636,6 +872,7 @@ async function init() {
   renderReadingNav();
   renderGameplayNav();
   renderContent();
+  attemptSilentGoogleLogin();
 }
 
 async function loadScenes() {
@@ -772,23 +1009,6 @@ function renderBaseLayout() {
         </div>
       </div>
     </div>
-    <div id="downloadModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
-      <div class="modal-content teacher-modal">
-        <button class="modal-close" data-close-target="downloadModal" aria-label="Close download modal">✕</button>
-        <h3>Download Saved Progress</h3>
-        <p>Select the sessions you want to export.</p>
-        <div class="download-toolbar">
-          <button type="button" id="selectAllSessions" class="secondary-button">Select all</button>
-          <button type="button" id="clearAllSessions" class="secondary-button">Deselect all</button>
-        </div>
-        <div id="downloadSessionList" class="session-checkbox-list"></div>
-        <div class="modal-actions">
-          <button type="button" class="secondary-button" data-close-target="downloadModal">Cancel</button>
-          <button id="driveBackupButton" type="button" class="secondary-button secondary">Back up to Drive</button>
-          <button id="downloadSessionsButton" type="button" class="secondary-button primary">Download</button>
-        </div>
-      </div>
-    </div>
     <div id="sceneStatusModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
       <div class="modal-content teacher-modal">
         <button class="modal-close" data-close-target="sceneStatusModal" aria-label="Close scene status">✕</button>
@@ -836,6 +1056,20 @@ function renderBaseLayout() {
         </div>
       </div>
     </div>
+    <div id="driveConflictModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal-content teacher-modal">
+        <button class="modal-close" data-close-target="driveConflictModal" aria-label="Close backup chooser">✕</button>
+        <h3>Choose a Drive backup to load</h3>
+        <p id="driveConflictMessage" class="muted-text"></p>
+        <p class="warning-text">Loading one version will overwrite the other save slot.</p>
+        <div id="driveConflictTabs" class="drive-diff-tabs" role="tablist"></div>
+        <div id="driveConflictPanels" class="drive-diff-panels"></div>
+        <div class="modal-actions">
+          <button id="loadAutosaveButton" type="button" class="secondary-button">Load autosave</button>
+          <button id="loadManualButton" type="button" class="secondary-button primary">Load manual save</button>
+        </div>
+      </div>
+    </div>
   `;
 
   app.querySelectorAll('.modal-close').forEach((button) => {
@@ -846,11 +1080,11 @@ function renderBaseLayout() {
     'vocabModal',
     'timelineModal',
     'sessionModal',
-    'downloadModal',
     'sceneStatusModal',
     'scenePromptModal',
     'sleepCardModal',
     'lostCardModal',
+    'driveConflictModal',
   ].forEach((id) => {
     const modal = document.getElementById(id);
     modal.addEventListener('click', (event) => {
@@ -876,21 +1110,13 @@ function setupTeacherControls() {
     });
   }
 
-  const selectAll = document.getElementById('selectAllSessions');
-  if (selectAll) {
-    selectAll.addEventListener('click', selectAllDownloadSessions);
+  const loadAutosave = document.getElementById('loadAutosaveButton');
+  if (loadAutosave) {
+    loadAutosave.addEventListener('click', () => confirmDriveLoad('autosave'));
   }
-  const clearAll = document.getElementById('clearAllSessions');
-  if (clearAll) {
-    clearAll.addEventListener('click', clearAllDownloadSessions);
-  }
-  const downloadButton = document.getElementById('downloadSessionsButton');
-  if (downloadButton) {
-    downloadButton.addEventListener('click', handleDownloadConfirm);
-  }
-  const driveButton = document.getElementById('driveBackupButton');
-  if (driveButton) {
-    driveButton.addEventListener('click', handleDriveBackup);
+  const loadManual = document.getElementById('loadManualButton');
+  if (loadManual) {
+    loadManual.addEventListener('click', () => confirmDriveLoad('manual'));
   }
 
   const startedButton = document.getElementById('markSceneStarted');
@@ -1080,10 +1306,19 @@ function renderGameplayNav() {
     return;
   }
 
+  const roleKey = getDriveRoleKey();
+  const sessionKey = getDriveSessionKey(roleKey);
+  const syncStatus = getDriveSyncState(roleKey, sessionKey);
+  const statusClass = syncStatus === 'dirty' ? 'unsaved' : 'saved';
+  const statusLabel =
+    syncStatus === 'dirty'
+      ? 'Changes pending Drive save'
+      : 'Changes saved to Drive';
   const isTeacherSession = state.role === 'teacher' && state.teacherView === 'session';
   nav.innerHTML = `
     <span class="nav-title">Gameplay Mode</span>
-    <div class="tab-group" role="tablist">
+    <div class="tab-group drive-sync-group ${statusClass}" role="tablist">
+      <span class="drive-sync-indicator" role="status" aria-label="${statusLabel}" title="${statusLabel}"></span>
       ${
         isTeacherSession
           ? `<button class="tab-button ${state.showGameStatus ? 'active' : ''}" data-status-tab="status" type="button">Game Status</button>`
@@ -1285,24 +1520,15 @@ function renderTeacherHome(container) {
     <p class="muted-text">Manage classroom sessions, download backups, and keep the adventure on track.</p>
   `;
 
-  const actions = document.createElement('div');
-  actions.className = 'teacher-actions';
+  const driveSection = document.createElement('div');
+  driveSection.className = 'teacher-backup-section';
 
-  const addButton = document.createElement('button');
-  addButton.type = 'button';
-  addButton.className = 'secondary-button primary';
-  addButton.textContent = 'Add session';
-  addButton.addEventListener('click', () => {
-    openNewSessionModal();
-  });
+  const driveHeading = document.createElement('h3');
+  driveHeading.textContent = 'Back up with Google Drive';
+  driveSection.appendChild(driveHeading);
 
-  const downloadButton = document.createElement('button');
-  downloadButton.type = 'button';
-  downloadButton.className = 'secondary-button';
-  downloadButton.textContent = 'Download saved progress';
-  downloadButton.addEventListener('click', () => {
-    openDownloadModal();
-  });
+  const driveActions = document.createElement('div');
+  driveActions.className = 'teacher-actions';
 
   const googleButton = document.createElement('button');
   googleButton.type = 'button';
@@ -1312,13 +1538,111 @@ function renderTeacherHome(container) {
     handleGoogleLogin();
   });
 
+  const signOutButton = document.createElement('button');
+  signOutButton.type = 'button';
+  signOutButton.className = 'secondary-button danger';
+  signOutButton.textContent = 'Sign out';
+  signOutButton.disabled = !state.googleAuth.connected;
+  signOutButton.title = state.googleAuth.connected ? '' : 'Sign in to connect a Google account.';
+  signOutButton.addEventListener('click', () => {
+    handleGoogleLogout();
+  });
+
+  const manualDriveButton = document.createElement('button');
+  manualDriveButton.type = 'button';
+  manualDriveButton.className = 'secondary-button primary';
+  manualDriveButton.textContent = 'Save to Drive';
+  manualDriveButton.disabled = !state.googleAuth.connected;
+  manualDriveButton.title = state.googleAuth.connected ? '' : 'Log in to enable Drive saves.';
+  manualDriveButton.addEventListener('click', handleManualDriveSave);
+
+  const loadDriveButton = document.createElement('button');
+  loadDriveButton.type = 'button';
+  loadDriveButton.className = 'secondary-button';
+  loadDriveButton.textContent = 'Load from Drive';
+  loadDriveButton.disabled = !state.googleAuth.connected;
+  loadDriveButton.title = state.googleAuth.connected ? '' : 'Log in to enable Drive saves.';
+  loadDriveButton.addEventListener('click', handleDriveLoadRequest);
+
   const status = document.createElement('span');
   status.className = 'muted-text';
   status.textContent = state.googleAuth.message;
 
-  actions.append(addButton, downloadButton, googleButton, status);
-  hero.appendChild(actions);
+  const driveMeta = document.createElement('span');
+  driveMeta.className = 'muted-text';
+  const { autosave, manual } = getDriveBackupMetadata('teacher', state.selectedTeacherSessionId);
+  driveMeta.textContent = `Autosave: ${formatBackupTimestamp(autosave)} · Manual: ${formatBackupTimestamp(manual)}`;
+
+  driveActions.append(googleButton, signOutButton, manualDriveButton, loadDriveButton);
+  driveSection.append(driveActions, status, driveMeta);
+
+  const localSection = document.createElement('div');
+  localSection.className = 'teacher-backup-section';
+
+  const localHeading = document.createElement('h3');
+  localHeading.textContent = 'Back up locally';
+  localSection.appendChild(localHeading);
+
+  const localActions = document.createElement('div');
+  localActions.className = 'teacher-actions';
+
+  const downloadButton = document.createElement('button');
+  downloadButton.type = 'button';
+  downloadButton.className = 'secondary-button';
+  downloadButton.textContent = 'Download sessions';
+  downloadButton.addEventListener('click', () => {
+    downloadAllTeacherSessions();
+  });
+
+  const uploadInput = document.createElement('input');
+  uploadInput.type = 'file';
+  uploadInput.accept = 'application/json';
+  uploadInput.className = 'visually-hidden';
+
+  const uploadButton = document.createElement('button');
+  uploadButton.type = 'button';
+  uploadButton.className = 'secondary-button';
+  uploadButton.textContent = 'Load sessions';
+  uploadButton.addEventListener('click', () => {
+    uploadInput.click();
+  });
+
+  uploadInput.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      importAllTeacherSessions(payload);
+    } catch (error) {
+      console.error('Unable to import sessions file.', error);
+      alert('Could not import sessions. Please ensure the file was exported from this app.');
+    } finally {
+      event.target.value = '';
+    }
+  });
+
+  localActions.append(downloadButton, uploadButton, uploadInput);
+  localSection.appendChild(localActions);
+
+  hero.append(driveSection, localSection);
   container.appendChild(hero);
+
+  const addRow = document.createElement('div');
+  addRow.className = 'session-add-row';
+
+  const addButton = document.createElement('button');
+  addButton.type = 'button';
+  addButton.className = 'secondary-button primary';
+  addButton.textContent = 'Add session';
+  addButton.addEventListener('click', () => {
+    openNewSessionModal();
+  });
+
+  addRow.appendChild(addButton);
 
   const sessionGrid = document.createElement('div');
   sessionGrid.className = 'session-grid';
@@ -1335,6 +1659,7 @@ function renderTeacherHome(container) {
     });
   }
 
+  container.appendChild(addRow);
   container.appendChild(sessionGrid);
 }
 
@@ -1397,6 +1722,13 @@ function formatTimestamp(value) {
   }
 }
 
+function formatBackupTimestamp(entry) {
+  if (!entry || !Number.isFinite(entry.updatedAt)) {
+    return 'No save';
+  }
+  return formatTimestamp(entry.updatedAt);
+}
+
 function createTeacherSessionBanner() {
   const session = getActiveTeacherSession();
   const card = document.createElement('section');
@@ -1424,15 +1756,7 @@ function createTeacherSessionBanner() {
     exitTeacherSession();
   });
 
-  const downloadButton = document.createElement('button');
-  downloadButton.type = 'button';
-  downloadButton.className = 'secondary-button secondary';
-  downloadButton.textContent = 'Download this session';
-  downloadButton.addEventListener('click', () => {
-    openDownloadModal([session.id]);
-  });
-
-  actions.append(homeButton, downloadButton);
+  actions.append(homeButton);
 
   const collapsible = document.createElement('details');
   collapsible.className = 'teacher-collapsible teacher-session-info';
@@ -1563,79 +1887,66 @@ function handleCreateSession() {
   const name = input?.value?.trim() ?? '';
   const session = createTeacherSession(name);
   state.teacherSessions = [...state.teacherSessions, session];
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('sessionModal');
   renderContent();
 }
 
-function openDownloadModal(preselectedIds = []) {
-  populateDownloadModal(preselectedIds);
-  openModal('downloadModal');
-}
-
-function populateDownloadModal(preselectedIds = []) {
-  const list = document.getElementById('downloadSessionList');
-  if (!list) {
-    return;
-  }
-  list.innerHTML = '';
-  const idsToCheck = new Set(preselectedIds);
+function downloadAllTeacherSessions() {
   if (state.teacherSessions.length === 0) {
-    const message = document.createElement('p');
-    message.className = 'muted-text';
-    message.textContent = 'No saved sessions available.';
-    list.appendChild(message);
-  } else {
-    state.teacherSessions.forEach((session) => {
-      const label = document.createElement('label');
-      label.className = 'session-checkbox';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.value = session.id;
-      if (idsToCheck.size === 0) {
-        checkbox.checked = false;
-      } else {
-        checkbox.checked = idsToCheck.has(session.id);
-      }
-      const span = document.createElement('span');
-      span.textContent = `${session.name} (${formatTimestamp(session.updatedAt)})`;
-      label.append(checkbox, span);
-      list.appendChild(label);
-    });
-  }
-
-  const driveButton = document.getElementById('driveBackupButton');
-  if (driveButton) {
-    driveButton.disabled = !state.googleAuth.connected;
-    driveButton.title = state.googleAuth.connected ? '' : 'Log in with Google to enable backups.';
-  }
-}
-
-function selectAllDownloadSessions() {
-  document.querySelectorAll('#downloadSessionList input[type="checkbox"]').forEach((box) => {
-    box.checked = true;
-  });
-}
-
-function clearAllDownloadSessions() {
-  document.querySelectorAll('#downloadSessionList input[type="checkbox"]').forEach((box) => {
-    box.checked = false;
-  });
-}
-
-function getSelectedDownloadSessionIds() {
-  return Array.from(document.querySelectorAll('#downloadSessionList input[type="checkbox"]'))
-    .filter((box) => box.checked)
-    .map((box) => box.value);
-}
-
-function handleDownloadConfirm() {
-  const ids = getSelectedDownloadSessionIds();
-  if (ids.length === 0) {
-    alert('Select at least one session to download.');
+    alert('No saved sessions available to download.');
     return;
   }
-  downloadSelectedSessions(ids);
+
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    sessions: state.teacherSessions,
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const filename = `stuffed-fable-sessions-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function importAllTeacherSessions(payload) {
+  const sessions = Array.isArray(payload?.sessions)
+    ? payload.sessions
+    : Array.isArray(payload)
+      ? payload
+      : null;
+
+  if (!sessions) {
+    alert('No sessions found in the uploaded file.');
+    return;
+  }
+
+  const normalized = sessions
+    .map((session) => {
+      if (!session?.id) {
+        return null;
+      }
+      return { ...session, updatedAt: session.updatedAt ?? Date.now() };
+    })
+    .filter(Boolean);
+
+  if (normalized.length === 0) {
+    alert('No valid sessions found in the uploaded file.');
+    return;
+  }
+
+  const incomingIds = new Set(normalized.map((session) => session.id));
+  const preserved = state.teacherSessions.filter((session) => !incomingIds.has(session.id));
+  state.teacherSessions = [...preserved, ...normalized];
+  persistTeacherSessions();
+  renderContent();
+  alert('Sessions imported successfully.');
 }
 
 function requestSceneStatusUpdate(nextSceneId) {
@@ -1687,7 +1998,7 @@ function setTeacherSceneStatus(status, sceneId = state.selectedSceneId) {
     session.sceneProgress[sceneId] = status;
   }
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
 }
 
 function applySceneChange(sceneId) {
@@ -1981,7 +2292,7 @@ function handleSleepCardSave() {
     session.sleepCards.push({ id: `sleep-${Date.now()}`, status: state.pendingSleepStatus });
   }
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('sleepCardModal');
   renderContent();
 }
@@ -1998,7 +2309,7 @@ function handleSleepCardDelete() {
   }
   session.sleepCards = session.sleepCards.filter((card) => card.id !== state.activeSleepCardId);
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('sleepCardModal');
   renderContent();
 }
@@ -2060,7 +2371,7 @@ function handleLostCardSave() {
     session.lostCards.push({ id: `lost-${Date.now()}`, name });
   }
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('lostCardModal');
   renderContent();
 }
@@ -2077,177 +2388,1038 @@ function handleLostCardDelete() {
   }
   session.lostCards = session.lostCards.filter((card) => card.id !== state.activeLostCardId);
   session.updatedAt = Date.now();
-  persistTeacherSessions();
+  persistTeacherSessions(session.id);
   closeModal('lostCardModal');
   renderContent();
 }
 
-function downloadSelectedSessions(ids) {
-  const selected = state.teacherSessions.filter((session) => ids.includes(session.id));
-  if (selected.length === 0) {
-    alert('No matching sessions found.');
+
+function getDriveRoleKey() {
+  return state.role === 'teacher' ? 'teacher' : 'student';
+}
+
+function getDriveSessionKey(roleKey = getDriveRoleKey(), sessionId = null) {
+  if (roleKey === 'teacher') {
+    return sessionId ?? state.selectedTeacherSessionId;
+  }
+  return 'student';
+}
+
+function getDriveSyncState(roleKey = getDriveRoleKey(), sessionId = null) {
+  const sessionKey = getDriveSessionKey(roleKey, sessionId) ?? 'global';
+  return state.driveSyncState[roleKey]?.[sessionKey] ?? 'saved';
+}
+
+function setDriveSyncState(roleKey, sessionKey, status) {
+  if (!roleKey) {
     return;
   }
-  const files = selected.map((session) => ({
-    name: getSessionFilename(session),
-    content: JSON.stringify(session, null, 2),
-  }));
-  let blob;
-  let filename;
-  if (files.length === 1) {
-    blob = new Blob([files[0].content], { type: 'application/json' });
-    filename = files[0].name;
-  } else {
-    blob = createZipArchive(files);
-    filename = `stuffed-fable-sessions-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+
+  const safeSessionKey = sessionKey ?? 'global';
+  if (!state.driveSyncState[roleKey]) {
+    state.driveSyncState[roleKey] = {};
   }
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-  closeModal('downloadModal');
-}
 
-function getSessionFilename(session) {
-  const slug = session.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
-  return `${slug || 'session'}-${session.id}.json`;
-}
-
-function createZipArchive(files) {
-  let offset = 0;
-  const fileEntries = [];
-  const chunks = [];
-  const encoder = new TextEncoder();
-
-  files.forEach((file) => {
-    const nameBytes = encoder.encode(file.name);
-    const dataBytes = encoder.encode(file.content);
-    const crc = crc32(dataBytes);
-    const { time, date } = getZipTimestamp();
-    const localHeader = new DataView(new ArrayBuffer(30));
-    localHeader.setUint32(0, 0x04034b50, true);
-    localHeader.setUint16(4, 20, true);
-    localHeader.setUint16(6, 0, true);
-    localHeader.setUint16(8, 0, true);
-    localHeader.setUint16(10, time, true);
-    localHeader.setUint16(12, date, true);
-    localHeader.setUint32(14, crc, true);
-    localHeader.setUint32(18, dataBytes.length, true);
-    localHeader.setUint32(22, dataBytes.length, true);
-    localHeader.setUint16(26, nameBytes.length, true);
-    localHeader.setUint16(28, 0, true);
-
-    chunks.push(localHeader, nameBytes, dataBytes);
-    fileEntries.push({ nameBytes, dataBytes, crc, offset, time, date });
-    offset += 30 + nameBytes.length + dataBytes.length;
-  });
-
-  const centralChunks = [];
-  let centralSize = 0;
-  fileEntries.forEach((entry) => {
-    const header = new DataView(new ArrayBuffer(46));
-    header.setUint32(0, 0x02014b50, true);
-    header.setUint16(4, 0x0014, true);
-    header.setUint16(6, 0x0014, true);
-    header.setUint16(8, 0, true);
-    header.setUint16(10, 0, true);
-    header.setUint16(12, entry.time, true);
-    header.setUint16(14, entry.date, true);
-    header.setUint32(16, entry.crc, true);
-    header.setUint32(20, entry.dataBytes.length, true);
-    header.setUint32(24, entry.dataBytes.length, true);
-    header.setUint16(28, entry.nameBytes.length, true);
-    header.setUint16(30, 0, true);
-    header.setUint16(32, 0, true);
-    header.setUint16(34, 0, true);
-    header.setUint16(36, 0, true);
-    header.setUint32(38, 0, true);
-    header.setUint32(42, entry.offset, true);
-    centralChunks.push(header, entry.nameBytes);
-    centralSize += 46 + entry.nameBytes.length;
-  });
-
-  const end = new DataView(new ArrayBuffer(22));
-  end.setUint32(0, 0x06054b50, true);
-  end.setUint16(4, 0, true);
-  end.setUint16(6, 0, true);
-  end.setUint16(8, fileEntries.length, true);
-  end.setUint16(10, fileEntries.length, true);
-  end.setUint32(12, centralSize, true);
-  end.setUint32(16, offset, true);
-  end.setUint16(20, 0, true);
-
-  return new Blob([...chunks, ...centralChunks, end], { type: 'application/zip' });
-}
-
-function crc32(bytes) {
-  const table = (function buildTable() {
-    if (crc32.table) {
-      return crc32.table;
-    }
-    const tbl = new Uint32Array(256);
-    for (let i = 0; i < 256; i += 1) {
-      let c = i;
-      for (let j = 0; j < 8; j += 1) {
-        c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-      }
-      tbl[i] = c >>> 0;
-    }
-    crc32.table = tbl;
-    return tbl;
-  })();
-  let crc = 0 ^ -1;
-  bytes.forEach((byte) => {
-    crc = (crc >>> 8) ^ table[(crc ^ byte) & 0xff];
-  });
-  return (crc ^ -1) >>> 0;
-}
-
-function getZipTimestamp() {
-  const now = new Date();
-  const time = ((now.getHours() & 0x1f) << 11) | ((now.getMinutes() & 0x3f) << 5) | (Math.floor(now.getSeconds() / 2) & 0x1f);
-  const date = (((now.getFullYear() - 1980) & 0x7f) << 9) | (((now.getMonth() + 1) & 0xf) << 5) | (now.getDate() & 0x1f);
-  return { time, date };
-}
-
-function handleDriveBackup() {
-  if (!state.googleAuth.connected) {
-    alert('Log in with Google to enable Drive backups.');
+  if (state.driveSyncState[roleKey][safeSessionKey] === status) {
     return;
   }
-  const ids = getSelectedDownloadSessionIds();
+
+  state.driveSyncState[roleKey][safeSessionKey] = status;
+  renderGameplayNav();
+}
+
+function markDriveSyncDirty(roleKey = getDriveRoleKey(), sessionId = null) {
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  setDriveSyncState(roleKey, sessionKey, 'dirty');
+}
+
+function markDriveSyncSaved(roleKey = getDriveRoleKey(), sessionId = null) {
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  setDriveSyncState(roleKey, sessionKey, 'saved');
+}
+
+function setDriveBackupMetadataEntry(roleKey, sessionKey, slot, updatedAt) {
+  if (!driveBackupMetadata[roleKey]) {
+    driveBackupMetadata[roleKey] = {};
+  }
+  if (!driveBackupMetadata[roleKey][sessionKey]) {
+    driveBackupMetadata[roleKey][sessionKey] = { autosave: null, manual: null };
+  }
+  driveBackupMetadata[roleKey][sessionKey][slot] = updatedAt
+    ? { updatedAt }
+    : null;
+}
+
+function getDriveBackupMetadata(roleKey = getDriveRoleKey(), sessionId = null) {
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  const entry = driveBackupMetadata[roleKey]?.[sessionKey];
+  return entry || { autosave: null, manual: null };
+}
+
+function cloneSessionForBackup(session) {
+  if (!session) {
+    return null;
+  }
+
+  return {
+    ...session,
+    sceneProgress: { ...(session.sceneProgress ?? {}) },
+    gameplay: session.gameplay ? JSON.parse(JSON.stringify(session.gameplay)) : getDefaultGameplaySnapshot(),
+    sleepCards: Array.isArray(session.sleepCards) ? [...session.sleepCards] : [],
+    lostCards: Array.isArray(session.lostCards) ? [...session.lostCards] : [],
+  };
+}
+
+function getTeacherDrivePayload(sessionId = null) {
+  const sessionKey = sessionId ?? state.selectedTeacherSessionId;
+  const session = state.teacherSessions.find((entry) => entry.id === sessionKey);
+  if (!session) {
+    throw new Error('Select a teacher session before saving to Drive.');
+  }
+  return {
+    session: cloneSessionForBackup(session),
+  };
+}
+
+function getStudentDrivePayload() {
+  return {
+    gameplay: getGameplaySnapshot(),
+  };
+}
+
+function getDrivePayloadByRole(roleKey, sessionKey = null) {
+  return roleKey === 'teacher' ? getTeacherDrivePayload(sessionKey) : getStudentDrivePayload();
+}
+
+function getDriveFileName(roleKey, slot, sessionKey) {
+  if (roleKey === 'teacher') {
+    return `stuffed-fable-teacher-${sessionKey}-${slot}.json`;
+  }
+  return `stuffed-fable-student-${slot}.json`;
+}
+
+function getDriveAppProperties(roleKey, slot, sessionKey, { includeSessionKey = true } = {}) {
+  const props = {
+    app: 'stuffed-fable-helper',
+    role: roleKey,
+    slot,
+  };
+
+  if (includeSessionKey) {
+    props.sessionKey = sessionKey ?? 'student';
+  }
+
+  return props;
+}
+
+function buildDriveQuery(roleKey, slot, sessionKey = null) {
+  const props = getDriveAppProperties(roleKey, slot, sessionKey, {
+    includeSessionKey: sessionKey !== null || roleKey !== 'teacher',
+  });
+  const segments = Object.entries(props).map(
+    ([key, value]) => `appProperties has { key='${key}' and value='${value}' }`
+  );
+  return `${segments.join(' and ')} and trashed = false`;
+}
+
+async function ensureDriveAccess({ allowSilent = false } = {}) {
+  if (GOOGLE_CLIENT_ID.includes('YOUR_')) {
+    throw new Error('Add your Google OAuth client ID in src/main.js to enable Google Drive backups.');
+  }
+
+  await getValidGoogleAccessToken({ allowSilent });
+  state.googleAuth.connected = true;
+  state.googleAuth.message = 'Connected to Google Drive';
+}
+
+async function driveRequest(path, { method = 'GET', params = {}, headers = {}, body = null, responseType = 'json', retry = true } = {}) {
+  const accessToken = await getValidGoogleAccessToken({ allowSilent: true });
+  const url = new URL(`https://www.googleapis.com${path}`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  const response = await fetch(url.toString(), {
+    method,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...headers,
+    },
+    body,
+  });
+
+  if (response.status === 401 && retry) {
+    await requestGoogleAccessToken();
+    return driveRequest(path, { method, params, headers, body, responseType, retry: false });
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Drive request failed (${response.status}): ${errorText}`);
+  }
+
+  if (responseType === 'text') {
+    return response.text();
+  }
+
+  if (responseType === 'raw') {
+    return response;
+  }
+
+  return response.json();
+}
+
+async function findDriveBackupFile(roleKey, slot, sessionKey) {
+  await ensureDriveAccess({ allowSilent: true });
+  const response = await driveRequest('/drive/v3/files', {
+    params: {
+      spaces: 'appDataFolder',
+      q: buildDriveQuery(roleKey, slot, sessionKey),
+      fields: 'files(id,name,modifiedTime)',
+      orderBy: 'modifiedTime desc',
+      pageSize: 1,
+    },
+  });
+  return response.files?.[0] ?? null;
+}
+
+async function listDriveBackups(roleKey, slot, sessionKey = null) {
+  await ensureDriveAccess({ allowSilent: true });
+  const response = await driveRequest('/drive/v3/files', {
+    params: {
+      spaces: 'appDataFolder',
+      q: buildDriveQuery(roleKey, slot, sessionKey),
+      fields: 'files(id,name,modifiedTime,appProperties)',
+      orderBy: 'modifiedTime desc',
+      pageSize: 1000,
+    },
+  });
+  return response.files ?? [];
+}
+
+async function deleteDriveBackupsForSession(sessionId) {
+  if (!sessionId) {
+    return false;
+  }
+
+  try {
+    await ensureDriveAccess({ allowSilent: true });
+  } catch (error) {
+    console.warn('Unable to authorize Drive cleanup.', error);
+    return false;
+  }
+
+  const slots = ['autosave', 'manual'];
+  try {
+    await Promise.all(
+      slots.map(async (slot) => {
+        const files = await listDriveBackups('teacher', slot, sessionId);
+        await Promise.all(
+          files.map(async (file) => {
+            if (!file?.id) {
+              return;
+            }
+            try {
+              await driveRequest(`/drive/v3/files/${file.id}`, { method: 'DELETE', responseType: 'text' });
+            } catch (error) {
+              console.warn(`Unable to delete Drive backup ${file.id} (${slot})`, error);
+            }
+          })
+        );
+      })
+    );
+    return true;
+  } catch (error) {
+    console.warn('Unable to remove Drive backups for deleted session.', error);
+    return false;
+  }
+}
+
+async function cleanupDeletedTeacherSessionsFromDrive(sessionIds = Array.from(state.deletedTeacherSessions)) {
+  const ids = Array.from(new Set(sessionIds.filter((id) => typeof id === 'string' && id.trim())));
   if (ids.length === 0) {
-    alert('Select at least one session to back up.');
     return;
   }
-  backupSessionsToDrive(ids);
-  closeModal('downloadModal');
+
+  for (const id of ids) {
+    const removed = await deleteDriveBackupsForSession(id);
+    if (removed) {
+      state.deletedTeacherSessions.delete(id);
+    }
+  }
+
+  persistDeletedTeacherSessions();
 }
 
-function backupSessionsToDrive(ids) {
-  const payload = state.teacherSessions.filter((session) => ids.includes(session.id));
-  console.info('Pretending to back up sessions to Google Drive:', payload);
-  alert('Google Drive backup requires API credentials. Check the console for the payload preview.');
+function createMultipartBody(metadata, data, boundary) {
+  const delimiter = `--${boundary}`;
+  const closeDelimiter = `--${boundary}--`;
+  return [
+    delimiter,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    JSON.stringify(metadata),
+    delimiter,
+    'Content-Type: application/json',
+    '',
+    JSON.stringify(data),
+    closeDelimiter,
+    '',
+  ].join('\r\n');
 }
 
-function handleGoogleLogin() {
-  if (GOOGLE_CLIENT_ID.includes('YOUR_') || GOOGLE_API_KEY.includes('YOUR_')) {
-    alert('Add your Google API credentials in src/main.js to enable Google Drive backups.');
+async function upsertDriveBackup(slot, roleKey, sessionKey, payload) {
+  if (!sessionKey) {
+    throw new Error('Select a session before saving to Drive.');
+  }
+
+  const existing = await findDriveBackupFile(roleKey, slot, sessionKey);
+  const metadata = {
+    name: getDriveFileName(roleKey, slot, sessionKey),
+    appProperties: getDriveAppProperties(roleKey, slot, sessionKey),
+  };
+  if (!existing) {
+    metadata.parents = ['appDataFolder'];
+  }
+  const boundary = `stuffed-fable-${Math.random().toString(36).slice(2)}`;
+  const body = createMultipartBody(metadata, payload, boundary);
+  const response = await driveRequest(existing ? `/upload/drive/v3/files/${existing.id}` : '/upload/drive/v3/files', {
+    method: existing ? 'PATCH' : 'POST',
+    params: {
+      uploadType: 'multipart',
+      fields: 'id,modifiedTime',
+    },
+    headers: {
+      'Content-Type': `multipart/related; boundary=${boundary}`,
+    },
+    body,
+  });
+
+  const modifiedTime = response.modifiedTime ? Date.parse(response.modifiedTime) : Date.now();
+  setDriveBackupMetadataEntry(roleKey, sessionKey, slot, modifiedTime);
+  return { updatedAt: modifiedTime, data: payload };
+}
+
+async function downloadDriveBackup(slot, roleKey, sessionKey) {
+  if (!sessionKey) {
+    throw new Error('Select a session before loading from Drive.');
+  }
+  const file = await findDriveBackupFile(roleKey, slot, sessionKey);
+  if (!file) {
+    return null;
+  }
+
+  const [metaResponse, contentResponse] = await Promise.all([
+    driveRequest(`/drive/v3/files/${file.id}`, { params: { fields: 'id,modifiedTime' } }),
+    driveRequest(`/drive/v3/files/${file.id}`, { params: { alt: 'media' }, responseType: 'text' }),
+  ]);
+
+  let parsed = null;
+  try {
+    parsed = contentResponse ? JSON.parse(contentResponse) : null;
+  } catch (error) {
+    console.error('Failed to parse Drive backup', error);
+    throw new Error('Invalid Drive backup content.');
+  }
+  const modifiedTime = metaResponse.modifiedTime ? Date.parse(metaResponse.modifiedTime) : Date.now();
+  setDriveBackupMetadataEntry(roleKey, sessionKey, slot, modifiedTime);
+  return {
+    updatedAt: modifiedTime,
+    data: parsed,
+  };
+}
+
+async function resolveTeacherSessionKeys({ sessionKey = null, loadAll = false } = {}) {
+  const keys = new Set();
+  if (sessionKey) {
+    keys.add(sessionKey);
+  }
+
+  if (loadAll) {
+    state.teacherSessions.forEach((session) => keys.add(session.id));
+    const [autosaveFiles, manualFiles] = await Promise.all([
+      listDriveBackups('teacher', 'autosave'),
+      listDriveBackups('teacher', 'manual'),
+    ]);
+    [...autosaveFiles, ...manualFiles].forEach((file) => {
+      const driveSessionKey = file?.appProperties?.sessionKey;
+      if (driveSessionKey) {
+        keys.add(driveSessionKey);
+      }
+    });
+  }
+
+  (state.deletedTeacherSessions ?? new Set()).forEach((deletedId) => keys.delete(deletedId));
+
+  return Array.from(keys);
+}
+
+function backupsAreDifferent(autosave, manual) {
+  if (!autosave || !manual) {
+    return false;
+  }
+  const autosaveSerialized = stableStringify(autosave.data ?? {});
+  const manualSerialized = stableStringify(manual.data ?? {});
+  return autosaveSerialized !== manualSerialized;
+}
+
+function pickPreferredBackup(autosave, manual) {
+  if (autosave && manual) {
+    return manual.updatedAt >= autosave.updatedAt ? manual : autosave;
+  }
+  return manual ?? autosave ?? null;
+}
+
+function scheduleDriveAutosave(roleKey = getDriveRoleKey(), sessionId = null) {
+  if (!state.googleAuth.connected) {
     return;
   }
-  state.googleAuth.connected = !state.googleAuth.connected;
-  state.googleAuth.message = state.googleAuth.connected
-    ? 'Connected to Google Drive (simulated).'
-    : 'Not connected';
+
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  if (roleKey === 'teacher' && !sessionKey) {
+    return;
+  }
+  const timerKey = `${roleKey}:${sessionKey ?? 'none'}`;
+  if (driveAutosaveTimers[timerKey]) {
+    clearTimeout(driveAutosaveTimers[timerKey]);
+  }
+
+  driveAutosaveTimers[timerKey] = setTimeout(() => {
+    performDriveSave('autosave', roleKey, sessionKey);
+  }, 400);
+}
+
+async function performDriveSave(slot, roleKey = getDriveRoleKey(), sessionId = null) {
+  if (!state.googleAuth.connected) {
+    return;
+  }
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  if (roleKey === 'teacher' && !sessionKey) {
+    return;
+  }
+  try {
+    const payload = getDrivePayloadByRole(roleKey, sessionKey);
+    const result = await upsertDriveBackup(slot, roleKey, sessionKey, payload);
+    console.info('Drive save completed', { slot, roleKey, sessionKey, updatedAt: result.updatedAt });
+    markDriveSyncSaved(roleKey, sessionKey);
+  } catch (error) {
+    console.error('Drive save failed', error);
+    state.googleAuth.message = 'Drive save failed';
+    renderContent();
+  }
+}
+
+async function handleManualDriveSave() {
+  if (state.role === 'teacher' && state.teacherView === 'home') {
+    const ids = state.teacherSessions.map((session) => session.id);
+    if (ids.length === 0) {
+      alert('Add a session before saving to Drive.');
+      return;
+    }
+    await backupSessionsToDrive(ids);
+    return;
+  }
+
+  const roleKey = getDriveRoleKey();
+  const sessionKey = getDriveSessionKey(roleKey);
+
+  if (roleKey === 'teacher' && !sessionKey) {
+    alert('Open a teacher session to save to Drive.');
+    return;
+  }
+
+  try {
+    await ensureDriveAccess();
+    const payload = getDrivePayloadByRole(roleKey, sessionKey);
+    const result = await upsertDriveBackup('manual', roleKey, sessionKey, payload);
+    console.info('Manual Drive save completed', { roleKey, sessionKey, updatedAt: result.updatedAt });
+    markDriveSyncSaved(roleKey, sessionKey);
+    alert('Manual save uploaded to Drive.');
+  } catch (error) {
+    console.error('Manual Drive save failed', error);
+    alert('Unable to save to Google Drive. Check your connection and credentials.');
+  }
+}
+
+function enqueueDriveConflict(conflict) {
+  state.driveConflictQueue.push(conflict);
+}
+
+function presentNextDriveConflict() {
+  if (state.pendingDriveLoad || state.driveConflictQueue.length === 0) {
+    return;
+  }
+
+  state.pendingDriveLoad = state.driveConflictQueue.shift();
+  const { autosave, manual } = state.pendingDriveLoad;
+  renderDriveConflictModal(autosave, manual);
+  openModal('driveConflictModal');
+}
+
+async function loadDriveBackupsForRole(
+  roleKey,
+  { sessionKey = null, loadAllTeacherSessions = false, silent = false, preserveTeacherSelection = false } = {}
+) {
+  if (!state.googleAuth.connected) {
+    try {
+      await ensureDriveAccess({ allowSilent: true });
+    } catch (error) {
+      if (!silent) {
+        alert('Log in with Google to load Drive backups.');
+      }
+      return;
+    }
+  }
+
+  if (driveLoadInProgress) {
+    return;
+  }
+  driveLoadInProgress = true;
+
+  const previousSelection = state.selectedTeacherSessionId;
+
+  try {
+    const sessionKeys =
+      roleKey === 'teacher'
+        ? await resolveTeacherSessionKeys({ sessionKey, loadAll: loadAllTeacherSessions })
+        : ['student'];
+
+    if (!sessionKeys.length) {
+      if (!silent) {
+        alert('No Drive backups available for this view.');
+      }
+      return;
+    }
+
+    for (const key of sessionKeys) {
+      const [autosave, manual] = await Promise.all([
+        downloadDriveBackup('autosave', roleKey, key).catch(() => null),
+        downloadDriveBackup('manual', roleKey, key).catch(() => null),
+      ]);
+
+      if (!autosave && !manual) {
+        continue;
+      }
+
+      if (autosave && manual && backupsAreDifferent(autosave, manual)) {
+        enqueueDriveConflict({ roleKey, sessionKey: key, autosave, manual });
+        continue;
+      }
+
+      const payload = pickPreferredBackup(autosave, manual);
+      if (payload) {
+        applyDrivePayload(roleKey, payload.data, key, { preserveTeacherSelection });
+      }
+    }
+  } catch (error) {
+    console.error('Drive load failed', error);
+    if (!silent) {
+      alert('Unable to load from Google Drive.');
+    }
+  } finally {
+    driveLoadInProgress = false;
+    if (preserveTeacherSelection) {
+      state.selectedTeacherSessionId = previousSelection;
+    }
+    renderContent();
+    presentNextDriveConflict();
+  }
+}
+
+function createMissingValue(label = 'Not present') {
+  const span = document.createElement('span');
+  span.className = 'missing-value';
+  span.textContent = label;
+  return span;
+}
+
+function toCellContent(value) {
+  if (value instanceof Node) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return createMissingValue();
+    }
+    const span = document.createElement('span');
+    span.textContent = value.join(', ');
+    return span;
+  }
+  if (value === null || value === undefined || value === '') {
+    return createMissingValue();
+  }
+  const span = document.createElement('span');
+  span.textContent = String(value);
+  return span;
+}
+
+function buildListDifference(autosaveValues = [], manualValues = [], missingLabel = 'Not present') {
+  const autosaveSet = new Set(autosaveValues);
+  const manualSet = new Set(manualValues);
+  const autosaveUnique = [...autosaveSet].filter((value) => !manualSet.has(value));
+  const manualUnique = [...manualSet].filter((value) => !autosaveSet.has(value));
+
+  if (!autosaveUnique.length && !manualUnique.length) {
+    return null;
+  }
+
+  return {
+    autosave: autosaveUnique.length ? autosaveUnique : createMissingValue(missingLabel),
+    manual: manualUnique.length ? manualUnique : createMissingValue(missingLabel),
+  };
+}
+
+function buildItemDifferenceRow(label, autosaveValue, manualValue, missingLabel = 'Not present') {
+  if (autosaveValue === manualValue) {
+    return null;
+  }
+  return {
+    field: label,
+    autosave: autosaveValue === 0 || autosaveValue ? autosaveValue : createMissingValue(missingLabel),
+    manual: manualValue === 0 || manualValue ? manualValue : createMissingValue(missingLabel),
+  };
+}
+
+function normalizeGameplayForDiff(gameplay) {
+  const fallback = getDefaultGameplaySnapshot();
+  const base = gameplay && typeof gameplay === 'object' ? gameplay : fallback;
+  const characters = fallback.characters.map((fallbackCharacter, index) =>
+    sanitizeCharacter(base.characters?.[index], fallbackCharacter)
+  );
+  return {
+    ...fallback,
+    ...base,
+    characters,
+  };
+}
+
+function buildCardDifferences(cardsA = [], cardsB = [], { labelPrefix, valueKey }) {
+  const rows = [];
+  const mapA = new Map(cardsA.map((card) => [card.id, card]));
+  const mapB = new Map(cardsB.map((card) => [card.id, card]));
+  const ids = new Set([...mapA.keys(), ...mapB.keys()]);
+
+  ids.forEach((id) => {
+    const entryA = mapA.get(id);
+    const entryB = mapB.get(id);
+    const valueA = entryA ? entryA[valueKey] : null;
+    const valueB = entryB ? entryB[valueKey] : null;
+
+    if (valueA !== valueB) {
+      const descriptor = entryA?.name || entryB?.name || id;
+      const missingLabel = `${descriptor} not present`;
+      rows.push({
+        field: `${labelPrefix} ${descriptor}`,
+        autosave: valueA ?? createMissingValue(missingLabel),
+        manual: valueB ?? createMissingValue(missingLabel),
+      });
+    }
+  });
+
+  return rows;
+}
+
+function buildCharacterDifferences(gameplayA, gameplayB, index) {
+  const rows = [];
+  const charactersA = normalizeGameplayForDiff(gameplayA).characters;
+  const charactersB = normalizeGameplayForDiff(gameplayB).characters;
+  const characterA = charactersA[index];
+  const characterB = charactersB[index];
+  if (!characterA && !characterB) {
+    return rows;
+  }
+
+  [
+    buildItemDifferenceRow('Name', characterA.name, characterB.name),
+    buildItemDifferenceRow('Stuffing', characterA.stuffing, characterB.stuffing),
+    buildItemDifferenceRow('Heart', characterA.heart, characterB.heart),
+    buildItemDifferenceRow('Buttons', characterA.buttons, characterB.buttons),
+    buildItemDifferenceRow('Die', characterA.die, characterB.die ?? null, 'No die'),
+  ]
+    .filter(Boolean)
+    .forEach((row) => rows.push(row));
+
+  const statusDifferences = buildListDifference(
+    characterA.statuses ?? [],
+    characterB.statuses ?? [],
+    'No unique statuses'
+  );
+  if (statusDifferences) {
+    rows.push({ field: 'Status effects', ...statusDifferences });
+  }
+
+  ITEM_SLOTS.forEach(({ key, label }) => {
+    const itemRow = buildItemDifferenceRow(label, characterA.items?.[key], characterB.items?.[key], 'Empty');
+    if (itemRow) {
+      rows.push(itemRow);
+    }
+  });
+
+  return rows;
+}
+
+function buildGameStatusDifferences(autosaveData, manualData, roleKey) {
+  const rows = [];
+  const autosaveSession = roleKey === 'teacher' ? autosaveData.session ?? {} : {};
+  const manualSession = roleKey === 'teacher' ? manualData.session ?? {} : {};
+  const autosaveGameplay = normalizeGameplayForDiff(
+    roleKey === 'teacher' ? autosaveSession.gameplay : autosaveData.gameplay
+  );
+  const manualGameplay = normalizeGameplayForDiff(roleKey === 'teacher' ? manualSession.gameplay : manualData.gameplay);
+
+  const activeRow = buildItemDifferenceRow(
+    'Active character',
+    autosaveGameplay.activeCharacterIndex,
+    manualGameplay.activeCharacterIndex
+  );
+  if (activeRow) {
+    rows.push(activeRow);
+  }
+
+  if (roleKey === 'teacher') {
+    const sceneProgressA = autosaveSession.sceneProgress ?? {};
+    const sceneProgressB = manualSession.sceneProgress ?? {};
+    const sceneIds = new Set([...Object.keys(sceneProgressA), ...Object.keys(sceneProgressB)]);
+    sceneIds.forEach((id) => {
+      const sceneRow = buildItemDifferenceRow(
+        `Scene ${id}`,
+        sceneProgressA[id] ?? null,
+        sceneProgressB[id] ?? null,
+        'Not started'
+      );
+      if (sceneRow) {
+        rows.push(sceneRow);
+      }
+    });
+
+    rows.push(
+      ...buildCardDifferences(autosaveSession.sleepCards, manualSession.sleepCards, {
+        labelPrefix: 'Sleep card',
+        valueKey: 'status',
+      })
+    );
+
+    rows.push(
+      ...buildCardDifferences(autosaveSession.lostCards, manualSession.lostCards, {
+        labelPrefix: 'Lost card',
+        valueKey: 'name',
+      })
+    );
+  }
+
+  return rows;
+}
+
+function buildDriveDifferenceTabs(roleKey, autosaveData, manualData) {
+  const gameplayAutosave = roleKey === 'teacher' ? autosaveData.session?.gameplay ?? {} : autosaveData.gameplay ?? {};
+  const gameplayManual = roleKey === 'teacher' ? manualData.session?.gameplay ?? {} : manualData.gameplay ?? {};
+
+  return [
+    { id: 'game', label: 'Game status', rows: buildGameStatusDifferences(autosaveData, manualData, roleKey) },
+    { id: 'character-1', label: 'Character 1', rows: buildCharacterDifferences(gameplayAutosave, gameplayManual, 0) },
+    { id: 'character-2', label: 'Character 2', rows: buildCharacterDifferences(gameplayAutosave, gameplayManual, 1) },
+  ];
+}
+
+function getTeacherSessionName(sessionKey) {
+  return state.teacherSessions.find((session) => session.id === sessionKey)?.name ?? 'Teacher session';
+}
+
+function renderDriveConflictModal(autosave, manual) {
+  const message = document.getElementById('driveConflictMessage');
+  const tabList = document.getElementById('driveConflictTabs');
+  const panelContainer = document.getElementById('driveConflictPanels');
+
+  const roleKey = state.pendingDriveLoad?.roleKey ?? getDriveRoleKey();
+  const sessionKey = state.pendingDriveLoad?.sessionKey ?? getDriveSessionKey(roleKey);
+  const sessionLabel = roleKey === 'teacher' ? getTeacherSessionName(sessionKey) : 'Student progress';
+
+  if (message) {
+    message.textContent = `Choose which backup to keep for ${sessionLabel}. Manual saved ${formatTimestamp(
+      manual?.updatedAt
+    )}, autosave saved ${formatTimestamp(autosave?.updatedAt)}.`;
+  }
+
+  if (!tabList || !panelContainer) {
+    return;
+  }
+
+  tabList.innerHTML = '';
+  panelContainer.innerHTML = '';
+
+  const tabs = buildDriveDifferenceTabs(roleKey, autosave?.data ?? {}, manual?.data ?? {}).filter(
+    (tab) => tab.rows.length > 0
+  );
+
+  if (tabs.length === 0) {
+    const placeholder = document.createElement('p');
+    placeholder.textContent = 'No differences detected.';
+    panelContainer.appendChild(placeholder);
+    return;
+  }
+
+  const activateTab = (tabId) => {
+    tabList.querySelectorAll('.drive-diff-tab').forEach((button) => {
+      button.classList.toggle('active', button.dataset.tab === tabId);
+    });
+    panelContainer.querySelectorAll('.drive-diff-panel').forEach((panel) => {
+      panel.classList.toggle('active', panel.dataset.tab === tabId);
+    });
+  };
+
+  tabs.forEach((tab, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'drive-diff-tab';
+    button.dataset.tab = tab.id;
+    button.textContent = tab.label;
+    button.addEventListener('click', () => activateTab(tab.id));
+    tabList.appendChild(button);
+
+    const panel = document.createElement('div');
+    panel.className = 'drive-diff-panel';
+    panel.dataset.tab = tab.id;
+
+    const table = document.createElement('table');
+    table.className = 'drive-diff-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>Field</th><th>Autosave</th><th>Manual</th></tr>';
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+
+    tab.rows.forEach((row) => {
+      const tr = document.createElement('tr');
+      const field = document.createElement('td');
+      field.textContent = row.field;
+      const autosaveCell = document.createElement('td');
+      autosaveCell.appendChild(toCellContent(row.autosave));
+      const manualCell = document.createElement('td');
+      manualCell.appendChild(toCellContent(row.manual));
+      tr.append(field, autosaveCell, manualCell);
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    panel.appendChild(table);
+    panelContainer.appendChild(panel);
+
+    if (index === 0) {
+      activateTab(tab.id);
+    }
+  });
+}
+
+function applyTeacherDrivePayload(payload, sessionKey = null, { preserveSelection = false } = {}) {
+  if (!payload || typeof payload !== 'object' || !payload.session) {
+    throw new Error('Invalid teacher backup payload.');
+  }
+
+  const session = sanitizeTeacherSession(payload.session);
+  if (!session) {
+    throw new Error('Invalid teacher session data.');
+  }
+
+  const index = state.teacherSessions.findIndex((entry) => entry.id === session.id);
+  if (index >= 0) {
+    state.teacherSessions[index] = session;
+  } else {
+    state.teacherSessions = [...state.teacherSessions, session];
+  }
+
+  if (!preserveSelection) {
+    state.selectedTeacherSessionId = sessionKey ?? session.id;
+  }
+  persistTeacherSessions(session.id);
+  if (state.teacherView === 'session') {
+    applyGameplayState(session.gameplay ?? getDefaultGameplaySnapshot());
+  }
+}
+
+function applyStudentDrivePayload(payload) {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Invalid student backup payload.');
+  }
+  applyGameplayState(payload.gameplay ?? getDefaultGameplaySnapshot());
+  saveGameplayProgress();
+}
+
+function applyDrivePayload(roleKey, payload, sessionKey = null, { preserveTeacherSelection = false } = {}) {
+  if (roleKey === 'teacher') {
+    applyTeacherDrivePayload(payload, sessionKey, { preserveSelection: preserveTeacherSelection });
+  } else {
+    applyStudentDrivePayload(payload);
+  }
+
+  renderReadingNav();
+  renderGameplayNav();
   renderContent();
+}
+
+async function handleDriveLoadRequest() {
+  const roleKey = getDriveRoleKey();
+  const sessionKey = getDriveSessionKey(roleKey);
+  const loadAllTeacherSessions = roleKey === 'teacher' && state.teacherView === 'home';
+
+  if (roleKey === 'teacher' && !loadAllTeacherSessions && !sessionKey) {
+    alert('Open a teacher session to load backups.');
+    return;
+  }
+
+  await loadDriveBackupsForRole(roleKey, {
+    sessionKey,
+    loadAllTeacherSessions,
+    preserveTeacherSelection: loadAllTeacherSessions,
+  });
+}
+
+async function confirmDriveLoad(choice) {
+  if (!state.pendingDriveLoad) {
+    closeModal('driveConflictModal');
+    return;
+  }
+
+  const { roleKey, sessionKey, autosave, manual } = state.pendingDriveLoad;
+  const confirmOverwrite = window.confirm(
+    'This choice will overwrite the other save slot on Drive. Continue?'
+  );
+
+  if (!confirmOverwrite) {
+    return;
+  }
+
+  const selected = choice === 'manual' ? manual : autosave;
+  if (!selected) {
+    closeModal('driveConflictModal');
+    return;
+  }
+
+  applyDrivePayload(roleKey, selected.data, sessionKey, { preserveTeacherSelection: true });
+  const payload = getDrivePayloadByRole(roleKey, sessionKey);
+  const slotsToSync = ['autosave', 'manual'];
+  try {
+    const results = await Promise.all(slotsToSync.map((slot) => upsertDriveBackup(slot, roleKey, sessionKey, payload)));
+    console.info('Drive slots synced after conflict resolution', {
+      roleKey,
+      sessionKey,
+      updatedAt: results.map((entry) => entry.updatedAt),
+    });
+    markDriveSyncSaved(roleKey, sessionKey);
+  } catch (error) {
+    console.error('Failed to sync Drive slots', error);
+  }
+
+  state.pendingDriveLoad = null;
+  closeModal('driveConflictModal');
+  presentNextDriveConflict();
+}
+
+async function backupSessionsToDrive(ids) {
+  if (!ids.length) {
+    return;
+  }
+  try {
+    await ensureDriveAccess();
+    await Promise.all(
+      ids.map(async (id) => {
+        const payload = getTeacherDrivePayload(id);
+        const result = await upsertDriveBackup('manual', 'teacher', id, payload);
+        console.info('Manual Drive backup completed', { sessionId: id, updatedAt: result.updatedAt });
+        markDriveSyncSaved('teacher', id);
+      })
+    );
+    alert('Selected sessions saved to Drive (manual slot).');
+  } catch (error) {
+    console.error('Bulk Drive backup failed', error);
+    alert('Unable to save selected sessions to Google Drive.');
+  }
+}
+
+async function startAutomaticDriveLoad() {
+  if (!state.googleAuth.connected) {
+    return;
+  }
+
+  await cleanupDeletedTeacherSessionsFromDrive();
+  await loadDriveBackupsForRole('teacher', {
+    loadAllTeacherSessions: true,
+    preserveTeacherSelection: true,
+    silent: true,
+  });
+  await loadDriveBackupsForRole('student', { silent: true });
+}
+
+async function handleGoogleLogin() {
+  if (GOOGLE_CLIENT_ID.includes('YOUR_')) {
+    alert('Add your Google OAuth client ID in src/main.js to enable Google Drive backups.');
+    return;
+  }
+
+  state.googleAuth.message = 'Connecting to Google…';
+  renderContent();
+
+  try {
+    await ensureDriveAccess();
+    state.googleAuth.connected = true;
+    state.googleAuth.message = 'Connected to Google Drive';
+    scheduleDriveAutosave('teacher');
+    scheduleDriveAutosave('student');
+    await startAutomaticDriveLoad();
+  } catch (error) {
+    console.error('Google login failed', error);
+    state.googleAuth.connected = false;
+    state.googleAuth.message = 'Google sign-in failed';
+    alert('Unable to connect to Google Drive.');
+  }
+
+  renderContent();
+}
+
+async function handleGoogleLogout() {
+  try {
+    await ensureGoogleApisLoaded();
+    if (googleAccessToken) {
+      window.google.accounts.oauth2.revoke(googleAccessToken, () => {});
+    }
+  } catch (error) {
+    console.warn('Unable to revoke Google token', error);
+  }
+
+  googleAccessToken = null;
+  googleTokenExpiresAt = 0;
+  clearGoogleTokenStorage();
+  state.googleAuth.connected = false;
+  state.googleAuth.message = 'Not connected';
+  state.pendingDriveLoad = null;
+  state.driveConflictQueue = [];
+  closeModal('driveConflictModal');
+  renderContent();
+}
+
+async function attemptSilentGoogleLogin() {
+  const hydrated = hydrateGoogleToken();
+  if (hydrated) {
+    state.googleAuth.connected = true;
+    state.googleAuth.message = 'Connected to Google Drive';
+  }
+
+  try {
+    await requestGoogleAccessToken(false, true);
+    state.googleAuth.connected = true;
+    state.googleAuth.message = 'Connected to Google Drive';
+    scheduleDriveAutosave('teacher');
+    scheduleDriveAutosave('student');
+    await startAutomaticDriveLoad();
+  } catch (error) {
+    if (hydrated) {
+      clearGoogleTokenStorage();
+    }
+    state.googleAuth.connected = false;
+    state.googleAuth.message = 'Log in with Google to sync saves.';
+  } finally {
+    renderContent();
+  }
 }
 
 function renderReadingContent(container) {
@@ -2545,53 +3717,82 @@ function renderGameplayContent(container) {
   itemsSection.appendChild(itemGrid);
   card.appendChild(itemsSection);
 
-  const backupSection = document.createElement('div');
-  backupSection.className = 'backup-controls';
+  if (state.role === 'student') {
+    const backupSection = document.createElement('div');
+    backupSection.className = 'backup-controls';
 
-  const backupButton = document.createElement('button');
-  backupButton.type = 'button';
-  backupButton.className = 'secondary-button';
-  backupButton.textContent = 'Back Up Data';
-  backupButton.addEventListener('click', () => {
-    downloadGameplayBackup();
-  });
+    const backupButton = document.createElement('button');
+    backupButton.type = 'button';
+    backupButton.className = 'secondary-button';
+    backupButton.textContent = 'Back Up Data';
+    backupButton.addEventListener('click', () => {
+      downloadGameplayBackup();
+    });
 
-  const uploadInput = document.createElement('input');
-  uploadInput.type = 'file';
-  uploadInput.accept = 'application/json';
-  uploadInput.className = 'visually-hidden';
+    const uploadInput = document.createElement('input');
+    uploadInput.type = 'file';
+    uploadInput.accept = 'application/json';
+    uploadInput.className = 'visually-hidden';
 
-  const uploadButton = document.createElement('button');
-  uploadButton.type = 'button';
-  uploadButton.className = 'secondary-button';
-  uploadButton.textContent = 'Restore Backup';
-  uploadButton.addEventListener('click', () => {
-    uploadInput.click();
-  });
+    const uploadButton = document.createElement('button');
+    uploadButton.type = 'button';
+    uploadButton.className = 'secondary-button';
+    uploadButton.textContent = 'Restore Backup';
+    uploadButton.addEventListener('click', () => {
+      uploadInput.click();
+    });
 
-  uploadInput.addEventListener('change', async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      const gameplayData = extractGameplayData(parsed);
-      applyGameplayState(gameplayData);
-      saveGameplayProgress();
-      renderGameplayNav();
-      renderContent();
-    } catch (error) {
-      console.error('Backup import failed.', error);
-      alert('Unable to import backup file. Please ensure it was created by this app.');
-    } finally {
-      event.target.value = '';
-    }
-  });
+    uploadInput.addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const gameplayData = extractGameplayData(parsed);
+        applyGameplayState(gameplayData);
+        saveGameplayProgress();
+        renderGameplayNav();
+        renderContent();
+      } catch (error) {
+        console.error('Backup import failed.', error);
+        alert('Unable to import backup file. Please ensure it was created by this app.');
+      } finally {
+        event.target.value = '';
+      }
+    });
+    const driveSaveButton = document.createElement('button');
+    driveSaveButton.type = 'button';
+    driveSaveButton.className = 'secondary-button primary';
+    driveSaveButton.textContent = 'Save to Drive';
+    driveSaveButton.disabled = !state.googleAuth.connected;
+    driveSaveButton.title = state.googleAuth.connected ? '' : 'Log in to enable Drive saves.';
+    driveSaveButton.addEventListener('click', handleManualDriveSave);
 
-  backupSection.append(backupButton, uploadButton, uploadInput);
-  card.appendChild(backupSection);
+    const driveLoadButton = document.createElement('button');
+    driveLoadButton.type = 'button';
+    driveLoadButton.className = 'secondary-button';
+    driveLoadButton.textContent = 'Load from Drive';
+    driveLoadButton.disabled = !state.googleAuth.connected;
+    driveLoadButton.title = state.googleAuth.connected ? '' : 'Log in to enable Drive saves.';
+    driveLoadButton.addEventListener('click', handleDriveLoadRequest);
+
+    const driveMeta = document.createElement('p');
+    driveMeta.className = 'muted-text';
+    const { autosave, manual } = getDriveBackupMetadata('student');
+    driveMeta.textContent = `Drive autosave: ${formatBackupTimestamp(autosave)} · Manual: ${formatBackupTimestamp(manual)}`;
+
+    backupSection.append(
+      backupButton,
+      uploadButton,
+      driveSaveButton,
+      driveLoadButton,
+      uploadInput,
+      driveMeta
+    );
+    card.appendChild(backupSection);
+  }
   container.appendChild(card);
 }
 
@@ -2732,6 +3933,12 @@ function closeModal(id) {
     }
     if (id === 'lostCardModal') {
       state.activeLostCardId = null;
+    }
+    if (id === 'driveConflictModal') {
+      if (state.pendingDriveLoad) {
+        state.driveConflictQueue.unshift(state.pendingDriveLoad);
+      }
+      state.pendingDriveLoad = null;
     }
   }
 }

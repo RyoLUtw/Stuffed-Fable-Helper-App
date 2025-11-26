@@ -92,6 +92,29 @@ body {
   border-radius: 999px;
   padding: 4px;
   gap: 4px;
+  align-items: center;
+}
+
+.drive-sync-group {
+  position: relative;
+  padding-left: 12px;
+  gap: 8px;
+}
+
+.drive-sync-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.15);
+}
+
+.drive-sync-group.unsaved .drive-sync-indicator {
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
 }
 
 .tab-button {
@@ -182,6 +205,21 @@ body {
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+}
+
+.teacher-backup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.teacher-backup-section h3 {
+  margin: 0;
+}
+
+.session-add-row {
+  margin: 12px 0;
 }
 
 .teacher-collapsible {
@@ -766,6 +804,72 @@ body {
   gap: 12px;
   align-items: center;
   justify-content: flex-start;
+}
+
+.drive-diff-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.drive-diff-tab {
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: white;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.drive-diff-tab.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.drive-diff-panels {
+  margin-top: 12px;
+}
+
+.drive-diff-panel {
+  display: none;
+}
+
+.drive-diff-panel.active {
+  display: block;
+}
+
+.drive-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.drive-diff-table th,
+.drive-diff-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.drive-diff-table th {
+  font-weight: 800;
+  background: rgba(17, 24, 39, 0.03);
+}
+
+.drive-diff-table td {
+  vertical-align: top;
+}
+
+.missing-value {
+  color: #4b5563;
+  font-style: italic;
+}
+
+.warning-text {
+  color: #b45309;
+  margin: 4px 0 0;
 }
 
 .visually-hidden {
