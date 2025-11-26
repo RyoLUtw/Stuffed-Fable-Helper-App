@@ -116,6 +116,7 @@ const state = {
   activeLostCardId: null,
   pendingDriveLoad: null,
   driveConflictQueue: [],
+  driveSyncState: { teacher: {}, student: { student: 'saved' } },
 };
 
 const driveAutosaveTimers = {};
@@ -605,6 +606,7 @@ function saveGameplayProgress() {
       return session;
     });
     scheduleDriveAutosave('teacher', state.selectedTeacherSessionId);
+    markDriveSyncDirty('teacher', state.selectedTeacherSessionId);
     return;
   }
 
@@ -620,6 +622,7 @@ function saveGameplayProgress() {
   }
 
   scheduleDriveAutosave('student');
+  markDriveSyncDirty('student');
 }
 
 function getGameplaySnapshot() {
@@ -745,6 +748,7 @@ function persistTeacherSessions(updatedSessionId = null) {
   try {
     window.localStorage.setItem(STORAGE_KEYS.teacherSessions, JSON.stringify(state.teacherSessions));
     scheduleDriveAutosave('teacher', updatedSessionId ?? state.selectedTeacherSessionId);
+    markDriveSyncDirty('teacher', updatedSessionId ?? state.selectedTeacherSessionId);
   } catch (error) {
     console.warn('Unable to save teacher sessions.', error);
   }
@@ -1294,10 +1298,19 @@ function renderGameplayNav() {
     return;
   }
 
+  const roleKey = getDriveRoleKey();
+  const sessionKey = getDriveSessionKey(roleKey);
+  const syncStatus = getDriveSyncState(roleKey, sessionKey);
+  const statusClass = syncStatus === 'dirty' ? 'unsaved' : 'saved';
+  const statusLabel =
+    syncStatus === 'dirty'
+      ? 'Changes pending Drive save'
+      : 'Changes saved to Drive';
   const isTeacherSession = state.role === 'teacher' && state.teacherView === 'session';
   nav.innerHTML = `
     <span class="nav-title">Gameplay Mode</span>
-    <div class="tab-group" role="tablist">
+    <div class="tab-group drive-sync-group ${statusClass}" role="tablist">
+      <span class="drive-sync-indicator" role="status" aria-label="${statusLabel}" title="${statusLabel}"></span>
       ${
         isTeacherSession
           ? `<button class="tab-button ${state.showGameStatus ? 'active' : ''}" data-status-tab="status" type="button">Game Status</button>`
@@ -2500,6 +2513,39 @@ function getDriveSessionKey(roleKey = getDriveRoleKey(), sessionId = null) {
   return 'student';
 }
 
+function getDriveSyncState(roleKey = getDriveRoleKey(), sessionId = null) {
+  const sessionKey = getDriveSessionKey(roleKey, sessionId) ?? 'global';
+  return state.driveSyncState[roleKey]?.[sessionKey] ?? 'saved';
+}
+
+function setDriveSyncState(roleKey, sessionKey, status) {
+  if (!roleKey) {
+    return;
+  }
+
+  const safeSessionKey = sessionKey ?? 'global';
+  if (!state.driveSyncState[roleKey]) {
+    state.driveSyncState[roleKey] = {};
+  }
+
+  if (state.driveSyncState[roleKey][safeSessionKey] === status) {
+    return;
+  }
+
+  state.driveSyncState[roleKey][safeSessionKey] = status;
+  renderGameplayNav();
+}
+
+function markDriveSyncDirty(roleKey = getDriveRoleKey(), sessionId = null) {
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  setDriveSyncState(roleKey, sessionKey, 'dirty');
+}
+
+function markDriveSyncSaved(roleKey = getDriveRoleKey(), sessionId = null) {
+  const sessionKey = getDriveSessionKey(roleKey, sessionId);
+  setDriveSyncState(roleKey, sessionKey, 'saved');
+}
+
 function setDriveBackupMetadataEntry(roleKey, sessionKey, slot, updatedAt) {
   if (!driveBackupMetadata[roleKey]) {
     driveBackupMetadata[roleKey] = {};
@@ -2807,7 +2853,9 @@ async function performDriveSave(slot, roleKey = getDriveRoleKey(), sessionId = n
   }
   try {
     const payload = getDrivePayloadByRole(roleKey, sessionKey);
-    await upsertDriveBackup(slot, roleKey, sessionKey, payload);
+    const result = await upsertDriveBackup(slot, roleKey, sessionKey, payload);
+    console.info('Drive save completed', { slot, roleKey, sessionKey, updatedAt: result.updatedAt });
+    markDriveSyncSaved(roleKey, sessionKey);
   } catch (error) {
     console.error('Drive save failed', error);
     state.googleAuth.message = 'Drive save failed';
@@ -2837,7 +2885,9 @@ async function handleManualDriveSave() {
   try {
     await ensureDriveAccess();
     const payload = getDrivePayloadByRole(roleKey, sessionKey);
-    await upsertDriveBackup('manual', roleKey, sessionKey, payload);
+    const result = await upsertDriveBackup('manual', roleKey, sessionKey, payload);
+    console.info('Manual Drive save completed', { roleKey, sessionKey, updatedAt: result.updatedAt });
+    markDriveSyncSaved(roleKey, sessionKey);
     alert('Manual save uploaded to Drive.');
   } catch (error) {
     console.error('Manual Drive save failed', error);
@@ -3301,7 +3351,13 @@ async function confirmDriveLoad(choice) {
   const payload = getDrivePayloadByRole(roleKey, sessionKey);
   const slotsToSync = ['autosave', 'manual'];
   try {
-    await Promise.all(slotsToSync.map((slot) => upsertDriveBackup(slot, roleKey, sessionKey, payload)));
+    const results = await Promise.all(slotsToSync.map((slot) => upsertDriveBackup(slot, roleKey, sessionKey, payload)));
+    console.info('Drive slots synced after conflict resolution', {
+      roleKey,
+      sessionKey,
+      updatedAt: results.map((entry) => entry.updatedAt),
+    });
+    markDriveSyncSaved(roleKey, sessionKey);
   } catch (error) {
     console.error('Failed to sync Drive slots', error);
   }
@@ -3320,7 +3376,9 @@ async function backupSessionsToDrive(ids) {
     await Promise.all(
       ids.map(async (id) => {
         const payload = getTeacherDrivePayload(id);
-        await upsertDriveBackup('manual', 'teacher', id, payload);
+        const result = await upsertDriveBackup('manual', 'teacher', id, payload);
+        console.info('Manual Drive backup completed', { sessionId: id, updatedAt: result.updatedAt });
+        markDriveSyncSaved('teacher', id);
       })
     );
     alert('Selected sessions saved to Drive (manual slot).');
