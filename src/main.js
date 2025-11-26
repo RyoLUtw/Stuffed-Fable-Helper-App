@@ -3296,9 +3296,10 @@ async function confirmDriveLoad(choice) {
   }
 
   applyDrivePayload(roleKey, selected.data, sessionKey, { preserveTeacherSelection: true });
-  const targetSlot = choice === 'manual' ? 'autosave' : 'manual';
+  const payload = getDrivePayloadByRole(roleKey, sessionKey);
+  const slotsToSync = ['autosave', 'manual'];
   try {
-    await upsertDriveBackup(targetSlot, roleKey, sessionKey, selected.data);
+    await Promise.all(slotsToSync.map((slot) => upsertDriveBackup(slot, roleKey, sessionKey, payload)));
   } catch (error) {
     console.error('Failed to sync Drive slots', error);
   }
