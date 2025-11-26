@@ -1009,23 +1009,6 @@ function renderBaseLayout() {
         </div>
       </div>
     </div>
-    <div id="downloadModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
-      <div class="modal-content teacher-modal">
-        <button class="modal-close" data-close-target="downloadModal" aria-label="Close download modal">✕</button>
-        <h3>Download Saved Progress</h3>
-        <p>Select the sessions you want to export.</p>
-        <div class="download-toolbar">
-          <button type="button" id="selectAllSessions" class="secondary-button">Select all</button>
-          <button type="button" id="clearAllSessions" class="secondary-button">Deselect all</button>
-        </div>
-        <div id="downloadSessionList" class="session-checkbox-list"></div>
-        <div class="modal-actions">
-          <button type="button" class="secondary-button" data-close-target="downloadModal">Cancel</button>
-          <button id="driveBackupButton" type="button" class="secondary-button secondary">Back up to Drive</button>
-          <button id="downloadSessionsButton" type="button" class="secondary-button primary">Download</button>
-        </div>
-      </div>
-    </div>
     <div id="sceneStatusModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
       <div class="modal-content teacher-modal">
         <button class="modal-close" data-close-target="sceneStatusModal" aria-label="Close scene status">✕</button>
@@ -1097,7 +1080,6 @@ function renderBaseLayout() {
     'vocabModal',
     'timelineModal',
     'sessionModal',
-    'downloadModal',
     'sceneStatusModal',
     'scenePromptModal',
     'sleepCardModal',
@@ -1126,23 +1108,6 @@ function setupTeacherControls() {
         handleCreateSession();
       }
     });
-  }
-
-  const selectAll = document.getElementById('selectAllSessions');
-  if (selectAll) {
-    selectAll.addEventListener('click', selectAllDownloadSessions);
-  }
-  const clearAll = document.getElementById('clearAllSessions');
-  if (clearAll) {
-    clearAll.addEventListener('click', clearAllDownloadSessions);
-  }
-  const downloadButton = document.getElementById('downloadSessionsButton');
-  if (downloadButton) {
-    downloadButton.addEventListener('click', handleDownloadConfirm);
-  }
-  const driveButton = document.getElementById('driveBackupButton');
-  if (driveButton) {
-    driveButton.addEventListener('click', handleDriveBackup);
   }
 
   const loadAutosave = document.getElementById('loadAutosaveButton');
@@ -1555,24 +1520,15 @@ function renderTeacherHome(container) {
     <p class="muted-text">Manage classroom sessions, download backups, and keep the adventure on track.</p>
   `;
 
-  const actions = document.createElement('div');
-  actions.className = 'teacher-actions';
+  const driveSection = document.createElement('div');
+  driveSection.className = 'teacher-backup-section';
 
-  const addButton = document.createElement('button');
-  addButton.type = 'button';
-  addButton.className = 'secondary-button primary';
-  addButton.textContent = 'Add session';
-  addButton.addEventListener('click', () => {
-    openNewSessionModal();
-  });
+  const driveHeading = document.createElement('h3');
+  driveHeading.textContent = 'Back up with Google Drive';
+  driveSection.appendChild(driveHeading);
 
-  const downloadButton = document.createElement('button');
-  downloadButton.type = 'button';
-  downloadButton.className = 'secondary-button';
-  downloadButton.textContent = 'Download saved progress';
-  downloadButton.addEventListener('click', () => {
-    openDownloadModal();
-  });
+  const driveActions = document.createElement('div');
+  driveActions.className = 'teacher-actions';
 
   const googleButton = document.createElement('button');
   googleButton.type = 'button';
@@ -1617,18 +1573,76 @@ function renderTeacherHome(container) {
   const { autosave, manual } = getDriveBackupMetadata('teacher', state.selectedTeacherSessionId);
   driveMeta.textContent = `Autosave: ${formatBackupTimestamp(autosave)} · Manual: ${formatBackupTimestamp(manual)}`;
 
-  actions.append(
-    addButton,
-    downloadButton,
-    googleButton,
-    signOutButton,
-    manualDriveButton,
-    loadDriveButton,
-    status,
-    driveMeta
-  );
-  hero.appendChild(actions);
+  driveActions.append(googleButton, signOutButton, manualDriveButton, loadDriveButton);
+  driveSection.append(driveActions, status, driveMeta);
+
+  const localSection = document.createElement('div');
+  localSection.className = 'teacher-backup-section';
+
+  const localHeading = document.createElement('h3');
+  localHeading.textContent = 'Back up locally';
+  localSection.appendChild(localHeading);
+
+  const localActions = document.createElement('div');
+  localActions.className = 'teacher-actions';
+
+  const downloadButton = document.createElement('button');
+  downloadButton.type = 'button';
+  downloadButton.className = 'secondary-button';
+  downloadButton.textContent = 'Download sessions';
+  downloadButton.addEventListener('click', () => {
+    downloadAllTeacherSessions();
+  });
+
+  const uploadInput = document.createElement('input');
+  uploadInput.type = 'file';
+  uploadInput.accept = 'application/json';
+  uploadInput.className = 'visually-hidden';
+
+  const uploadButton = document.createElement('button');
+  uploadButton.type = 'button';
+  uploadButton.className = 'secondary-button';
+  uploadButton.textContent = 'Load sessions';
+  uploadButton.addEventListener('click', () => {
+    uploadInput.click();
+  });
+
+  uploadInput.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      importAllTeacherSessions(payload);
+    } catch (error) {
+      console.error('Unable to import sessions file.', error);
+      alert('Could not import sessions. Please ensure the file was exported from this app.');
+    } finally {
+      event.target.value = '';
+    }
+  });
+
+  localActions.append(downloadButton, uploadButton, uploadInput);
+  localSection.appendChild(localActions);
+
+  hero.append(driveSection, localSection);
   container.appendChild(hero);
+
+  const addRow = document.createElement('div');
+  addRow.className = 'session-add-row';
+
+  const addButton = document.createElement('button');
+  addButton.type = 'button';
+  addButton.className = 'secondary-button primary';
+  addButton.textContent = 'Add session';
+  addButton.addEventListener('click', () => {
+    openNewSessionModal();
+  });
+
+  addRow.appendChild(addButton);
 
   const sessionGrid = document.createElement('div');
   sessionGrid.className = 'session-grid';
@@ -1645,6 +1659,7 @@ function renderTeacherHome(container) {
     });
   }
 
+  container.appendChild(addRow);
   container.appendChild(sessionGrid);
 }
 
@@ -1741,15 +1756,7 @@ function createTeacherSessionBanner() {
     exitTeacherSession();
   });
 
-  const downloadButton = document.createElement('button');
-  downloadButton.type = 'button';
-  downloadButton.className = 'secondary-button secondary';
-  downloadButton.textContent = 'Download this session';
-  downloadButton.addEventListener('click', () => {
-    openDownloadModal([session.id]);
-  });
-
-  actions.append(homeButton, downloadButton);
+  actions.append(homeButton);
 
   const collapsible = document.createElement('details');
   collapsible.className = 'teacher-collapsible teacher-session-info';
@@ -1885,74 +1892,61 @@ function handleCreateSession() {
   renderContent();
 }
 
-function openDownloadModal(preselectedIds = []) {
-  populateDownloadModal(preselectedIds);
-  openModal('downloadModal');
-}
-
-function populateDownloadModal(preselectedIds = []) {
-  const list = document.getElementById('downloadSessionList');
-  if (!list) {
-    return;
-  }
-  list.innerHTML = '';
-  const idsToCheck = new Set(preselectedIds);
+function downloadAllTeacherSessions() {
   if (state.teacherSessions.length === 0) {
-    const message = document.createElement('p');
-    message.className = 'muted-text';
-    message.textContent = 'No saved sessions available.';
-    list.appendChild(message);
-  } else {
-    state.teacherSessions.forEach((session) => {
-      const label = document.createElement('label');
-      label.className = 'session-checkbox';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.value = session.id;
-      if (idsToCheck.size === 0) {
-        checkbox.checked = false;
-      } else {
-        checkbox.checked = idsToCheck.has(session.id);
-      }
-      const span = document.createElement('span');
-      span.textContent = `${session.name} (${formatTimestamp(session.updatedAt)})`;
-      label.append(checkbox, span);
-      list.appendChild(label);
-    });
-  }
-
-  const driveButton = document.getElementById('driveBackupButton');
-  if (driveButton) {
-    driveButton.disabled = !state.googleAuth.connected;
-    driveButton.title = state.googleAuth.connected ? '' : 'Log in with Google to enable backups.';
-  }
-}
-
-function selectAllDownloadSessions() {
-  document.querySelectorAll('#downloadSessionList input[type="checkbox"]').forEach((box) => {
-    box.checked = true;
-  });
-}
-
-function clearAllDownloadSessions() {
-  document.querySelectorAll('#downloadSessionList input[type="checkbox"]').forEach((box) => {
-    box.checked = false;
-  });
-}
-
-function getSelectedDownloadSessionIds() {
-  return Array.from(document.querySelectorAll('#downloadSessionList input[type="checkbox"]'))
-    .filter((box) => box.checked)
-    .map((box) => box.value);
-}
-
-function handleDownloadConfirm() {
-  const ids = getSelectedDownloadSessionIds();
-  if (ids.length === 0) {
-    alert('Select at least one session to download.');
+    alert('No saved sessions available to download.');
     return;
   }
-  downloadSelectedSessions(ids);
+
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    sessions: state.teacherSessions,
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const filename = `stuffed-fable-sessions-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function importAllTeacherSessions(payload) {
+  const sessions = Array.isArray(payload?.sessions)
+    ? payload.sessions
+    : Array.isArray(payload)
+      ? payload
+      : null;
+
+  if (!sessions) {
+    alert('No sessions found in the uploaded file.');
+    return;
+  }
+
+  const normalized = sessions
+    .map((session) => {
+      if (!session?.id) {
+        return null;
+      }
+      return { ...session, updatedAt: session.updatedAt ?? Date.now() };
+    })
+    .filter(Boolean);
+
+  if (normalized.length === 0) {
+    alert('No valid sessions found in the uploaded file.');
+    return;
+  }
+
+  const incomingIds = new Set(normalized.map((session) => session.id));
+  const preserved = state.teacherSessions.filter((session) => !incomingIds.has(session.id));
+  state.teacherSessions = [...preserved, ...normalized];
+  persistTeacherSessions();
+  renderContent();
+  alert('Sessions imported successfully.');
 }
 
 function requestSceneStatusUpdate(nextSceneId) {
@@ -2399,151 +2393,6 @@ function handleLostCardDelete() {
   renderContent();
 }
 
-function downloadSelectedSessions(ids) {
-  const selected = state.teacherSessions.filter((session) => ids.includes(session.id));
-  if (selected.length === 0) {
-    alert('No matching sessions found.');
-    return;
-  }
-  const files = selected.map((session) => ({
-    name: getSessionFilename(session),
-    content: JSON.stringify(session, null, 2),
-  }));
-  let blob;
-  let filename;
-  if (files.length === 1) {
-    blob = new Blob([files[0].content], { type: 'application/json' });
-    filename = files[0].name;
-  } else {
-    blob = createZipArchive(files);
-    filename = `stuffed-fable-sessions-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
-  }
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-  closeModal('downloadModal');
-}
-
-function getSessionFilename(session) {
-  const slug = session.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
-  return `${slug || 'session'}-${session.id}.json`;
-}
-
-function createZipArchive(files) {
-  let offset = 0;
-  const fileEntries = [];
-  const chunks = [];
-  const encoder = new TextEncoder();
-
-  files.forEach((file) => {
-    const nameBytes = encoder.encode(file.name);
-    const dataBytes = encoder.encode(file.content);
-    const crc = crc32(dataBytes);
-    const { time, date } = getZipTimestamp();
-    const localHeader = new DataView(new ArrayBuffer(30));
-    localHeader.setUint32(0, 0x04034b50, true);
-    localHeader.setUint16(4, 20, true);
-    localHeader.setUint16(6, 0, true);
-    localHeader.setUint16(8, 0, true);
-    localHeader.setUint16(10, time, true);
-    localHeader.setUint16(12, date, true);
-    localHeader.setUint32(14, crc, true);
-    localHeader.setUint32(18, dataBytes.length, true);
-    localHeader.setUint32(22, dataBytes.length, true);
-    localHeader.setUint16(26, nameBytes.length, true);
-    localHeader.setUint16(28, 0, true);
-
-    chunks.push(localHeader, nameBytes, dataBytes);
-    fileEntries.push({ nameBytes, dataBytes, crc, offset, time, date });
-    offset += 30 + nameBytes.length + dataBytes.length;
-  });
-
-  const centralChunks = [];
-  let centralSize = 0;
-  fileEntries.forEach((entry) => {
-    const header = new DataView(new ArrayBuffer(46));
-    header.setUint32(0, 0x02014b50, true);
-    header.setUint16(4, 0x0014, true);
-    header.setUint16(6, 0x0014, true);
-    header.setUint16(8, 0, true);
-    header.setUint16(10, 0, true);
-    header.setUint16(12, entry.time, true);
-    header.setUint16(14, entry.date, true);
-    header.setUint32(16, entry.crc, true);
-    header.setUint32(20, entry.dataBytes.length, true);
-    header.setUint32(24, entry.dataBytes.length, true);
-    header.setUint16(28, entry.nameBytes.length, true);
-    header.setUint16(30, 0, true);
-    header.setUint16(32, 0, true);
-    header.setUint16(34, 0, true);
-    header.setUint16(36, 0, true);
-    header.setUint32(38, 0, true);
-    header.setUint32(42, entry.offset, true);
-    centralChunks.push(header, entry.nameBytes);
-    centralSize += 46 + entry.nameBytes.length;
-  });
-
-  const end = new DataView(new ArrayBuffer(22));
-  end.setUint32(0, 0x06054b50, true);
-  end.setUint16(4, 0, true);
-  end.setUint16(6, 0, true);
-  end.setUint16(8, fileEntries.length, true);
-  end.setUint16(10, fileEntries.length, true);
-  end.setUint32(12, centralSize, true);
-  end.setUint32(16, offset, true);
-  end.setUint16(20, 0, true);
-
-  return new Blob([...chunks, ...centralChunks, end], { type: 'application/zip' });
-}
-
-function crc32(bytes) {
-  const table = (function buildTable() {
-    if (crc32.table) {
-      return crc32.table;
-    }
-    const tbl = new Uint32Array(256);
-    for (let i = 0; i < 256; i += 1) {
-      let c = i;
-      for (let j = 0; j < 8; j += 1) {
-        c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-      }
-      tbl[i] = c >>> 0;
-    }
-    crc32.table = tbl;
-    return tbl;
-  })();
-  let crc = 0 ^ -1;
-  bytes.forEach((byte) => {
-    crc = (crc >>> 8) ^ table[(crc ^ byte) & 0xff];
-  });
-  return (crc ^ -1) >>> 0;
-}
-
-function getZipTimestamp() {
-  const now = new Date();
-  const time = ((now.getHours() & 0x1f) << 11) | ((now.getMinutes() & 0x3f) << 5) | (Math.floor(now.getSeconds() / 2) & 0x1f);
-  const date = (((now.getFullYear() - 1980) & 0x7f) << 9) | (((now.getMonth() + 1) & 0xf) << 5) | (now.getDate() & 0x1f);
-  return { time, date };
-}
-
-async function handleDriveBackup() {
-  const ids = getSelectedDownloadSessionIds();
-  if (ids.length === 0) {
-    alert('Select at least one session to back up.');
-    return;
-  }
-  await backupSessionsToDrive(ids);
-  closeModal('downloadModal');
-}
 
 function getDriveRoleKey() {
   return state.role === 'teacher' ? 'teacher' : 'student';
@@ -3868,80 +3717,82 @@ function renderGameplayContent(container) {
   itemsSection.appendChild(itemGrid);
   card.appendChild(itemsSection);
 
-  const backupSection = document.createElement('div');
-  backupSection.className = 'backup-controls';
+  if (state.role === 'student') {
+    const backupSection = document.createElement('div');
+    backupSection.className = 'backup-controls';
 
-  const backupButton = document.createElement('button');
-  backupButton.type = 'button';
-  backupButton.className = 'secondary-button';
-  backupButton.textContent = 'Back Up Data';
-  backupButton.addEventListener('click', () => {
-    downloadGameplayBackup();
-  });
+    const backupButton = document.createElement('button');
+    backupButton.type = 'button';
+    backupButton.className = 'secondary-button';
+    backupButton.textContent = 'Back Up Data';
+    backupButton.addEventListener('click', () => {
+      downloadGameplayBackup();
+    });
 
-  const uploadInput = document.createElement('input');
-  uploadInput.type = 'file';
-  uploadInput.accept = 'application/json';
-  uploadInput.className = 'visually-hidden';
+    const uploadInput = document.createElement('input');
+    uploadInput.type = 'file';
+    uploadInput.accept = 'application/json';
+    uploadInput.className = 'visually-hidden';
 
-  const uploadButton = document.createElement('button');
-  uploadButton.type = 'button';
-  uploadButton.className = 'secondary-button';
-  uploadButton.textContent = 'Restore Backup';
-  uploadButton.addEventListener('click', () => {
-    uploadInput.click();
-  });
+    const uploadButton = document.createElement('button');
+    uploadButton.type = 'button';
+    uploadButton.className = 'secondary-button';
+    uploadButton.textContent = 'Restore Backup';
+    uploadButton.addEventListener('click', () => {
+      uploadInput.click();
+    });
 
-  uploadInput.addEventListener('change', async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      const gameplayData = extractGameplayData(parsed);
-      applyGameplayState(gameplayData);
-      saveGameplayProgress();
-      renderGameplayNav();
-      renderContent();
-    } catch (error) {
-      console.error('Backup import failed.', error);
-      alert('Unable to import backup file. Please ensure it was created by this app.');
-    } finally {
-      event.target.value = '';
-    }
-  });
-  const driveSaveButton = document.createElement('button');
-  driveSaveButton.type = 'button';
-  driveSaveButton.className = 'secondary-button primary';
-  driveSaveButton.textContent = 'Save to Drive';
-  driveSaveButton.disabled = !state.googleAuth.connected;
-  driveSaveButton.title = state.googleAuth.connected ? '' : 'Log in to enable Drive saves.';
-  driveSaveButton.addEventListener('click', handleManualDriveSave);
+    uploadInput.addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const gameplayData = extractGameplayData(parsed);
+        applyGameplayState(gameplayData);
+        saveGameplayProgress();
+        renderGameplayNav();
+        renderContent();
+      } catch (error) {
+        console.error('Backup import failed.', error);
+        alert('Unable to import backup file. Please ensure it was created by this app.');
+      } finally {
+        event.target.value = '';
+      }
+    });
+    const driveSaveButton = document.createElement('button');
+    driveSaveButton.type = 'button';
+    driveSaveButton.className = 'secondary-button primary';
+    driveSaveButton.textContent = 'Save to Drive';
+    driveSaveButton.disabled = !state.googleAuth.connected;
+    driveSaveButton.title = state.googleAuth.connected ? '' : 'Log in to enable Drive saves.';
+    driveSaveButton.addEventListener('click', handleManualDriveSave);
 
-  const driveLoadButton = document.createElement('button');
-  driveLoadButton.type = 'button';
-  driveLoadButton.className = 'secondary-button';
-  driveLoadButton.textContent = 'Load from Drive';
-  driveLoadButton.disabled = !state.googleAuth.connected;
-  driveLoadButton.title = state.googleAuth.connected ? '' : 'Log in to enable Drive saves.';
-  driveLoadButton.addEventListener('click', handleDriveLoadRequest);
+    const driveLoadButton = document.createElement('button');
+    driveLoadButton.type = 'button';
+    driveLoadButton.className = 'secondary-button';
+    driveLoadButton.textContent = 'Load from Drive';
+    driveLoadButton.disabled = !state.googleAuth.connected;
+    driveLoadButton.title = state.googleAuth.connected ? '' : 'Log in to enable Drive saves.';
+    driveLoadButton.addEventListener('click', handleDriveLoadRequest);
 
-  const driveMeta = document.createElement('p');
-  driveMeta.className = 'muted-text';
-  const { autosave, manual } = getDriveBackupMetadata('student');
-  driveMeta.textContent = `Drive autosave: ${formatBackupTimestamp(autosave)} · Manual: ${formatBackupTimestamp(manual)}`;
+    const driveMeta = document.createElement('p');
+    driveMeta.className = 'muted-text';
+    const { autosave, manual } = getDriveBackupMetadata('student');
+    driveMeta.textContent = `Drive autosave: ${formatBackupTimestamp(autosave)} · Manual: ${formatBackupTimestamp(manual)}`;
 
-  backupSection.append(
-    backupButton,
-    uploadButton,
-    driveSaveButton,
-    driveLoadButton,
-    uploadInput,
-    driveMeta
-  );
-  card.appendChild(backupSection);
+    backupSection.append(
+      backupButton,
+      uploadButton,
+      driveSaveButton,
+      driveLoadButton,
+      uploadInput,
+      driveMeta
+    );
+    card.appendChild(backupSection);
+  }
   container.appendChild(card);
 }
 

@@ -207,6 +207,21 @@ body {
   align-items: center;
 }
 
+.teacher-backup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.teacher-backup-section h3 {
+  margin: 0;
+}
+
+.session-add-row {
+  margin: 12px 0;
+}
+
 .teacher-collapsible {
   border: 1px solid rgba(31, 41, 51, 0.12);
   border-radius: 16px;
