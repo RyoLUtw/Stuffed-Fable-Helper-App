@@ -2686,9 +2686,11 @@ async function upsertDriveBackup(slot, roleKey, sessionKey, payload) {
   const existing = await findDriveBackupFile(roleKey, slot, sessionKey);
   const metadata = {
     name: getDriveFileName(roleKey, slot, sessionKey),
-    parents: ['appDataFolder'],
     appProperties: getDriveAppProperties(roleKey, slot, sessionKey),
   };
+  if (!existing) {
+    metadata.parents = ['appDataFolder'];
+  }
   const boundary = `stuffed-fable-${Math.random().toString(36).slice(2)}`;
   const body = createMultipartBody(metadata, payload, boundary);
   const response = await driveRequest(existing ? `/upload/drive/v3/files/${existing.id}` : '/upload/drive/v3/files', {
