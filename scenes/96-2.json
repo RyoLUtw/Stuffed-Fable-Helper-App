@@ -1,0 +1,48 @@
+{
+  "narrative": {
+    "title": "Scene 96-2",
+    "paragraphs": [
+      "A tiny rift opened above them, and a golden ray shone down. The light burst outward and expanded, enveloping every stuffy until they vanished from the strange world. In the next blink, they emerged beneath the little girl’s bed, back in the quiet room.",
+      "\"It’s nearly dawn,\" Stitch whispered. The stuffies climbed up with tired sighs, and Stitch declared how delighted he was to stand with such honorable friends.",
+      "Lumpy asked about the myth of Crepitus, but before Stitch could speak, the girl woke with a sudden twist. Lumpy slid right off the bed as her eyes opened. Mommy rushed in and spotted the blanket on the floor, its corner torn along the edge.",
+      "The little girl rubbed her eyes and said she hadn’t slept well. She murmured that frightening dreams had troubled her all night."
+    ],
+    "vocabulary": [
+      { "word": "rift", "definition": "A small opening or crack where something splits apart.", "examples": ["A bright light shone through a rift in the clouds.", "They spotted a rift in the cave wall just big enough to squeeze through."] },
+      { "word": "ray", "definition": "A narrow line of light that comes from a bright source.", "examples": ["A ray of sunlight warmed the cold room.", "The cat chased a thin ray from a flashlight."] },
+      { "word": "beam", "definition": "A strong, focused line of light.", "examples": ["A beam of light swept across the stage.", "The lighthouse sent out a bright beam to guide ships."] },
+      { "word": "burst", "definition": "To break open or explode suddenly.", "examples": ["The balloon burst when it hit the nail.", "Laughter burst from the class after the joke."] },
+      { "word": "expand", "definition": "To grow larger or spread out.", "examples": ["The sponge expanded when it absorbed water.", "The crowd expanded as more people joined."] },
+      { "word": "enveloping", "definition": "To wrap around or cover completely.", "examples": ["Fog was enveloping the street.", "She felt warmth enveloping her as she rested."] },
+      { "word": "emerge", "definition": "To come out of or appear from something.", "examples": ["A butterfly will emerge later.", "The boat emerged from behind the rocks."] },
+      { "word": "dawn", "definition": "The early time when the sun begins to appear.", "examples": ["They woke before dawn.", "The sky brightened at dawn."] },
+      { "word": "sigh", "definition": "To breathe out loudly because of emotion or tiredness.", "examples": ["She let out a sigh after finishing her work.", "He sighed at the long wait ahead."] },
+      { "word": "declare", "definition": "To say something strongly and clearly.", "examples": ["She declared her plan confidently.", "He declared his intention to join."] },
+      { "word": "delighted", "definition": "Very happy or pleased.", "examples": ["They were delighted by the surprise.", "He felt delighted with the results."] },
+      { "word": "honorable", "definition": "Having good moral qualities such as fairness or integrity.", "examples": ["Helping others is honorable.", "The knight acted in an honorable way."] },
+      { "word": "myth", "definition": "A traditional story often explaining something about the world.", "examples": ["The myth described ancient heroes.", "Every culture has a myth about creation."] },
+      { "word": "slid", "definition": "Past tense of slide; to move smoothly across a surface.", "examples": ["The book slid off the desk.", "She slid across the ice."] },
+      { "word": "torn", "definition": "Pulled apart or damaged.", "examples": ["His shirt was torn.", "The old poster was torn at the top."] },
+      { "word": "edge", "definition": "The border or outer line of something.", "examples": ["He stood at the edge of the pool.", "The cup rolled toward the edge of the table."] }
+    ]
+  },
+  "timeline": {
+    "events": [
+      { "type": "anchor", "text": "A small opening appears above, letting down a narrow band of bright light." },
+      { "type": "blank", "text": "The glow spreads quickly and wraps around the group like a rising wave." },
+      { "type": "blank", "text": "The toys suddenly find themselves back beneath the child’s bed." },
+      { "type": "anchor", "text": "Their leader urges them to move quickly because morning is near." },
+      { "type": "blank", "text": "The group climbs onto the bed, slow and worn out." },
+      { "type": "blank", "text": "Their elder recognizes their courage and expresses genuine pride." },
+      { "type": "anchor", "text": "One toy asks about an old story linked to the dark figure they encountered." },
+      { "type": "blank", "text": "Before an answer comes, the child wakes sharply, knocking one toy out of place." },
+      { "type": "blank", "text": "The caregiver spots the blanket on the floor, damaged along one side." },
+      { "type": "blank", "text": "The child explains she slept poorly and was troubled by frightening dreams." }
+    ],
+    "distractors": [
+      "The child wakes slowly, blinking at the morning light.",
+      "The blanket rests at the foot of the bed with no clear marks visible.",
+      "The child mentions remembering a happy dream from earlier."
+    ]
+  }
+}

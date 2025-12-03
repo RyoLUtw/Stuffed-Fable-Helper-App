@@ -1,0 +1,48 @@
+{
+  "narrative": {
+    "title": "Scene 96-1",
+    "paragraphs": [
+      "A tiny rift opened above them, and a golden ray shone down. The light burst outward and expanded, enveloping every stuffy until they vanished from the strange world. In the next blink, they emerged beneath the little girl’s bed, safe at last.",
+      "\"It’s nearly dawn,\" Stitch whispered, urging them to hurry. The stuffies climbed up, sharing tired sighs. Stitch declared how delighted he was to stand with such honorable companions.",
+      "Lumpy then asked about the old myth of Crepitus. Stitch began to explain how Crepitus grew jealous of his silver brother, a story tied to abandoned toys and restless dreams. But before he could say more, Mommy walked in and spotted the blanket covered in a variety of stains, its corner ripped from the journey.",
+      "The little girl stirred softly, unaware of what her guardians had faced."
+    ],
+    "vocabulary": [
+      { "word": "rift", "definition": "A small opening or crack where something splits apart.", "examples": ["A bright light shone through a rift in the clouds.", "They spotted a rift in the cave wall just big enough to squeeze through."] },
+      { "word": "ray", "definition": "A narrow line of light that comes from a bright source.", "examples": ["A ray of sunlight warmed the cold room.", "The cat chased a thin ray from a flashlight."] },
+      { "word": "beam", "definition": "A strong, focused line of light.", "examples": ["A beam of light swept across the stage.", "The lighthouse sent out a bright beam to guide ships."] },
+      { "word": "burst", "definition": "To break open or explode suddenly.", "examples": ["The balloon burst when it hit the nail.", "Laughter burst from the class after the joke."] },
+      { "word": "expand", "definition": "To grow larger or spread out.", "examples": ["The sponge began to expand when it absorbed water.", "The crowd expanded as more people joined."] },
+      { "word": "enveloping", "definition": "To wrap around or cover something completely.", "examples": ["A warm blanket was enveloping her as she slept.", "Thick fog enveloped the entire street."] },
+      { "word": "emerge", "definition": "To come out of or appear from something.", "examples": ["A butterfly will emerge from its chrysalis.", "The boat finally emerged from behind the rocks."] },
+      { "word": "dawn", "definition": "The time in the morning when the sun first appears.", "examples": ["They woke before dawn to catch the train.", "By dawn, the storm had passed."] },
+      { "word": "sigh", "definition": "To breathe out loudly because of emotion or tiredness.", "examples": ["She let out a sigh after finishing her homework.", "He sighed at the long line ahead."] },
+      { "word": "declare", "definition": "To say something strongly and clearly.", "examples": ["She declared that the plan would work.", "He declared his intention to compete."] },
+      { "word": "delighted", "definition": "Very happy or pleased.", "examples": ["The children were delighted by the surprise.", "He felt delighted with his results."] },
+      { "word": "honorable", "definition": "Having good moral qualities such as fairness or integrity.", "examples": ["Helping others is an honorable act.", "He was known for his honorable behavior."] },
+      { "word": "myth", "definition": "A traditional story often explaining something about the world.", "examples": ["The myth described how the stars were formed.", "Every culture has a myth about creation."] },
+      { "word": "jealous", "definition": "Feeling unhappy because someone else has something you want.", "examples": ["She felt jealous of her friend's new bike.", "He was jealous of his brother’s talent."] },
+      { "word": "abandoned", "definition": "Left behind or no longer cared for.", "examples": ["The abandoned house felt eerie.", "They found an abandoned toy by the road."] },
+      { "word": "variety", "definition": "A set of different types of things.", "examples": ["The store sold a variety of snacks.", "The garden had a variety of flowers."] },
+      { "word": "ripped", "definition": "Torn apart quickly or forcefully.", "examples": ["He ripped the letter open.", "The fabric ripped during the fall."] }
+    ]
+  },
+  "timeline": {
+    "events": [
+      { "type": "anchor", "text": "A small opening appears above, letting down a narrow band of bright light." },
+      { "type": "blank", "text": "The glow spreads quickly and wraps around the group like a rising wave." },
+      { "type": "blank", "text": "In an instant, the toys find themselves back beneath the child’s bed." },
+      { "type": "anchor", "text": "Their leader urges them to move quickly because morning is near." },
+      { "type": "blank", "text": "The group climbs onto the bed, their movements slow from exhaustion." },
+      { "type": "blank", "text": "Their elder praises their bravery and expresses deep pride in them." },
+      { "type": "anchor", "text": "One toy asks about an old story connected to the creature they encountered." },
+      { "type": "blank", "text": "The elder begins retelling a story about one brother envying another." },
+      { "type": "blank", "text": "The caregiver enters and finds the child’s blanket damaged and heavily stained." }
+    ],
+    "distractors": [
+      "The toys appear scattered across the bedroom carpet when the light fades.",
+      "The elder focuses on warning them about the journey rather than praising them.",
+      "The blanket lies half-tucked under the bed, making its condition hard to see."
+    ]
+  }
+}
