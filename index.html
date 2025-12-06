@@ -1,19 +1,991 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stuffed Fable Helper</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="./src/styles.css" />
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="./src/main.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>5 Second Rule Trainer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --border: #e3e6ef;
+      --primary: #3a7afe;
+      --primary-dark: #2f65ce;
+      --accent: #ff9f1c;
+      --danger: #ef476f;
+      --text: #1f2933;
+      --muted: #6b7280;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 0;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f1f4f9;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text);
+      transition: all 0.2s ease;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      margin-bottom: 18px;
+    }
+    h1 { font-size: 28px; margin: 0 0 8px; }
+    h2 { margin: 0 0 10px; font-size: 20px; }
+    h3 { margin: 0 0 8px; font-size: 16px; }
+    label { font-weight: 600; }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 14px;
+      background: #fff;
+    }
+    textarea { resize: vertical; min-height: 120px; }
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s;
+    }
+    button:active { transform: translateY(1px); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(58,122,254,0.2);
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-ghost { background: #f4f6fb; color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .inline-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .grid { display: grid; gap: 12px; }
+    .set-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #fbfcff;
+    }
+    .set-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .badge { background: #eef2ff; color: #3b4b9a; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .item-row { display: grid; grid-template-columns: 2fr 1.2fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .item-row input { width: 100%; }
+    .hidden { display: none !important; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .tag-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .tag { padding: 4px 8px; background: #eef2f7; border-radius: 8px; font-size: 12px; color: var(--muted); }
+    .notice { padding: 10px; background: #fff7e6; border: 1px solid #ffe8c2; color: #7a4a00; border-radius: 10px; }
+    .muted { color: var(--muted); font-size: 14px; }
+    .game-grid { display: grid; gap: 12px; }
+    .mode-toggle button { padding: 10px 12px; border: 1px solid var(--border); background: #f4f6fb; color: var(--text); }
+    .mode-toggle button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .difficulty { display: flex; gap: 12px; }
+    .difficulty label { font-weight: 500; }
+    .difficulty input { width: auto; }
+    .prompt-box { background: #0b2447; color: #fff; border-radius: 12px; padding: 14px; }
+    .prompt-box h2 { color: #fff; }
+    .timer {
+      font-size: 36px; font-weight: 800; margin: 12px 0 6px;
+      text-align: center;
+    }
+    .progress { width: 100%; height: 10px; background: #e5edff; border-radius: 999px; overflow: hidden; }
+    .progress-inner { height: 100%; width: 100%; background: linear-gradient(90deg, #3a7afe, #63b3ff); transition: width 0.1s linear; }
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .pill-btn { padding: 10px 12px; border: 1px solid var(--border); background: #f5f7fb; color: var(--text); border-radius: 10px; cursor: pointer; font-weight: 700; }
+    .pill-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .heart-bar { display: flex; gap: 6px; align-items: center; font-size: 22px; }
+    .score-line { font-weight: 700; font-size: 16px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap: 10px; }
+    .stat-card { padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: #f8fafc; }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+    }
+    .modal { background: #fff; border-radius: 12px; padding: 16px; max-width: 650px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.2); }
+    .modal h3 { margin-top: 0; }
+    .message { margin-top: 8px; font-size: 14px; }
+    .success { color: #0f8a5f; }
+    .error { color: #c0392b; }
+    @media (max-width: 720px) {
+      .item-row { grid-template-columns: 1fr; }
+      .difficulty { flex-direction: column; }
+      .set-header { flex-direction: column; align-items: flex-start; }
+      .mode-toggle { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+      button { width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container flex-between">
+      <div>
+        <h1>5 Second Rule Trainer</h1>
+        <div class="muted">Single-player practice with vocab tracking</div>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-study">Study Sets</button>
+        <button class="tab-btn" id="tab-game">Game</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="manage-page" class="panel">
+      <div class="flex-between">
+        <h2>Study Set Management</h2>
+        <div class="inline-controls">
+          <button class="btn-primary" id="btn-new-set">New Set</button>
+          <button class="btn-ghost" id="btn-import">Import JSON</button>
+          <button class="btn-ghost" id="btn-save">Save sets locally</button>
+          <button class="btn-accent" id="btn-download">Download sets as JSON</button>
+        </div>
+      </div>
+      <div id="manage-message" class="message muted"></div>
+      <div id="set-list"></div>
+      <div class="panel" style="margin-top:12px;">
+        <h3>Cloud Backup (Google Drive)</h3>
+        <div class="grid">
+          <label>Google OAuth Client ID
+            <input id="client-id" placeholder="Paste your OAuth Client ID" />
+          </label>
+          <div class="inline-controls">
+            <button class="btn-primary" id="btn-drive-save">Save sets to Google Drive</button>
+            <button class="btn-ghost" id="btn-download-2">Download sets as JSON</button>
+          </div>
+          <div id="drive-status" class="message muted">Provide your own Client ID to enable Drive backup.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="game-page" class="panel hidden">
+      <div class="game-grid">
+        <div class="flex-between">
+          <h2>Game</h2>
+          <div class="inline-controls">
+            <span class="muted">Best:</span>
+            <span id="best-display" class="badge">Survival: 0</span>
+          </div>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(240px,1fr));">
+          <div>
+            <label for="set-select">Active study set</label>
+            <select id="set-select"></select>
+            <div class="muted" id="set-hint">Select a set to play.</div>
+          </div>
+          <div>
+            <label>Difficulty</label>
+            <div class="difficulty">
+              <label><input type="radio" name="difficulty" value="easy" /> Easy</label>
+              <label><input type="radio" name="difficulty" value="medium" checked /> Medium</label>
+              <label><input type="radio" name="difficulty" value="hard" /> Hard</label>
+            </div>
+          </div>
+          <div>
+            <label>Mode</label>
+            <div class="mode-toggle btn-group">
+              <button id="mode-survival" data-mode="survival">Mode 1 – Survival</button>
+              <button id="mode-endless" data-mode="endless">Mode 3 – Endless Streak</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="background:#f8fafc;">
+          <div class="flex-between">
+            <div>
+              <div class="muted">Status</div>
+              <div id="status-line" class="score-line">Idle</div>
+            </div>
+            <div class="inline-controls">
+              <button class="btn-primary" id="btn-start">Start Game</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="game-panels">
+          <div id="idle-panel" class="panel" style="background:#fbfcff;">
+            <h3>Ready to play?</h3>
+            <p class="muted">Choose a study set, difficulty, and mode to begin. Survival uses hearts; Endless focuses on an unbroken streak of "Nailed it" answers.</p>
+          </div>
+
+          <div id="prompt-panel" class="panel hidden">
+            <div class="flex-between">
+              <div class="badge" id="difficulty-label">Medium</div>
+              <div id="lives-display" class="heart-bar"></div>
+              <div id="streak-display" class="badge hidden"></div>
+            </div>
+            <div class="prompt-box">
+              <div class="muted">Prompt</div>
+              <h2 id="prompt-text">Prompt goes here</h2>
+              <div class="tag-list" id="prompt-tags"></div>
+            </div>
+            <div class="timer" id="timer-number">5</div>
+            <div class="progress"><div class="progress-inner" id="timer-bar"></div></div>
+            <div class="btn-group" style="margin-top:12px;">
+              <button class="btn-primary" id="btn-done">Done</button>
+              <button class="btn-ghost" id="btn-end-run">End Run</button>
+            </div>
+          </div>
+
+          <div id="evaluate-panel" class="panel hidden">
+            <div class="flex-between">
+              <div class="badge" id="eval-difficulty">Medium</div>
+              <div id="eval-lives" class="heart-bar"></div>
+              <div id="eval-streak" class="badge hidden"></div>
+            </div>
+            <div class="prompt-box" style="background:#102a43;">
+              <div class="muted">Self-Evaluate</div>
+              <h2 id="eval-prompt">Prompt</h2>
+            </div>
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+              <div>
+                <div class="muted">Performance</div>
+                <div class="btn-group" id="performance-buttons">
+                  <button class="pill-btn" data-perf="nailed">Nailed it</button>
+                  <button class="pill-btn" data-perf="almost">Almost</button>
+                  <button class="pill-btn" data-perf="freeze">Brain freeze</button>
+                </div>
+              </div>
+              <div>
+                <div class="muted">Target vocabulary used</div>
+                <div class="btn-group" id="target-buttons">
+                  <button class="pill-btn" data-target="0">0</button>
+                  <button class="pill-btn" data-target="1">1</button>
+                  <button class="pill-btn" data-target="2">2</button>
+                  <button class="pill-btn" data-target="3">3+</button>
+                </div>
+              </div>
+            </div>
+            <div class="stat-grid" style="margin-top:10px;">
+              <div class="stat-card">Base points: <strong id="base-points">0</strong></div>
+              <div class="stat-card">Target multiplier: <strong id="multiplier">1.0x</strong></div>
+              <div class="stat-card">Round points: <strong id="final-points">0</strong></div>
+            </div>
+            <div class="btn-group" style="margin-top:12px;">
+              <button class="btn-primary" id="btn-confirm" disabled>Confirm & Next</button>
+            </div>
+          </div>
+
+          <div id="gameover-panel" class="panel hidden">
+            <h3>Run summary</h3>
+            <div class="stat-grid">
+              <div class="stat-card">Final score: <strong id="final-score">0</strong></div>
+              <div class="stat-card" id="final-rounds-row">Rounds played: <strong id="final-rounds">0</strong></div>
+              <div class="stat-card hidden" id="final-streak-row">Final streak: <strong id="final-streak">0</strong></div>
+              <div class="stat-card" id="best-survival-row">Best Survival score: <strong id="best-survival">0</strong></div>
+              <div class="stat-card hidden" id="best-endless-row">Best Endless streak: <strong id="best-endless">0</strong> | Score: <strong id="best-endless-score">0</strong></div>
+            </div>
+            <div class="btn-group" style="margin-top:12px;">
+              <button class="btn-primary" id="btn-play-again">Play again (same mode)</button>
+              <button class="btn-ghost" id="btn-back-menu">Back to Game Menu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="import-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="flex-between">
+        <h3>Import Study Sets from JSON</h3>
+        <button class="btn-ghost" id="btn-close-modal">Close</button>
+      </div>
+      <p class="muted">Paste an array of study sets with <code>name</code>, <code>items</code>, and each item containing <code>prompt</code> and <code>targetWords</code>.</p>
+      <textarea id="import-text" placeholder='[ { "name": "Fruits", "items": [ { "prompt": "Name 3 fruits", "targetWords": ["tropical", "juicy"] } ] } ]'></textarea>
+      <div id="import-error" class="message error"></div>
+      <div class="inline-controls" style="margin-top:10px;">
+        <button class="btn-primary" id="btn-import-confirm">Import</button>
+        <button class="btn-ghost" id="btn-import-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ----- Local storage keys -----
+    const STORAGE_KEYS = {
+      sets: 'fiveSecondStudySets',
+      bestSurvival: 'fiveSecondBestScoreSurvival',
+      bestEndlessScore: 'fiveSecondBestScoreEndless',
+      bestEndlessStreak: 'fiveSecondBestStreakEndless',
+      lastSet: 'fiveSecondLastStudySetName',
+      lastDifficulty: 'fiveSecondLastDifficulty'
+    };
+
+    // ----- In-memory data -----
+    let studySets = [];
+    let selectedMode = null; // 'survival' | 'endless'
+    let currentRun = null;   // details for active run
+    let evaluation = { performance: null, target: null, finalPoints: 0 };
+    let bestScores = { survival: 0, endlessScore: 0, endlessStreak: 0 };
+
+    // ----- DOM helpers -----
+    const $ = (id) => document.getElementById(id);
+
+    // ----- Initialization -----
+    function init() {
+      loadStudySets();
+      loadBestScores();
+      renderStudySets();
+      populateSetSelect();
+      restoreLastSelections();
+      attachHandlers();
+      updateBestDisplay();
+      updateStartButtonState();
+    }
+
+    // Load study sets from localStorage or create a starter set
+    function loadStudySets() {
+      const raw = localStorage.getItem(STORAGE_KEYS.sets);
+      if (raw) {
+        try { studySets = JSON.parse(raw) || []; }
+        catch { studySets = []; }
+      }
+      if (!Array.isArray(studySets) || studySets.length === 0) {
+        studySets = [
+          {
+            name: 'Sample Set',
+            items: [
+              { prompt: 'Name 3 fruits', targetWords: ['tropical', 'juicy', 'citrus'] },
+              { prompt: 'Name 3 hobbies', targetWords: ['creative', 'outdoor', 'relaxing'] }
+            ]
+          }
+        ];
+      }
+    }
+
+    function saveStudySets() {
+      localStorage.setItem(STORAGE_KEYS.sets, JSON.stringify(studySets));
+      showManageMessage('Saved locally.', 'success');
+    }
+
+    function loadBestScores() {
+      bestScores.survival = Number(localStorage.getItem(STORAGE_KEYS.bestSurvival)) || 0;
+      bestScores.endlessScore = Number(localStorage.getItem(STORAGE_KEYS.bestEndlessScore)) || 0;
+      bestScores.endlessStreak = Number(localStorage.getItem(STORAGE_KEYS.bestEndlessStreak)) || 0;
+    }
+
+    function updateBestDisplay() {
+      if (selectedMode === 'endless') {
+        $('best-display').textContent = `Endless: streak ${bestScores.endlessStreak} | score ${bestScores.endlessScore}`;
+      } else {
+        $('best-display').textContent = `Survival: ${bestScores.survival}`;
+      }
+    }
+
+    function showManageMessage(text, type = 'muted') {
+      const el = $('manage-message');
+      el.textContent = text;
+      el.className = `message ${type}`;
+    }
+
+    // ----- Study set rendering -----
+    function renderStudySets() {
+      const list = $('set-list');
+      list.innerHTML = '';
+      if (studySets.length === 0) {
+        list.innerHTML = '<div class="notice">No study sets yet. Create a new one or import JSON.</div>';
+        return;
+      }
+      studySets.forEach((set, setIndex) => {
+        const card = document.createElement('div');
+        card.className = 'set-card';
+        const header = document.createElement('div');
+        header.className = 'set-header';
+
+        const nameInput = document.createElement('input');
+        nameInput.value = set.name;
+        nameInput.oninput = () => {
+          set.name = nameInput.value;
+          populateSetSelect();
+        };
+
+        const count = document.createElement('div');
+        count.className = 'badge';
+        count.textContent = `${set.items.length} items`;
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn-danger';
+        delBtn.textContent = 'Delete set';
+        delBtn.onclick = () => {
+          if (confirm('Delete this study set?')) {
+            studySets.splice(setIndex, 1);
+            renderStudySets();
+            populateSetSelect();
+          }
+        };
+
+        header.append(nameInput, count, delBtn);
+        card.appendChild(header);
+
+        const body = document.createElement('div');
+        body.style.marginTop = '10px';
+
+        set.items.forEach((item, itemIndex) => {
+          const row = document.createElement('div');
+          row.className = 'item-row';
+
+          const promptInput = document.createElement('input');
+          promptInput.placeholder = 'Prompt';
+          promptInput.value = item.prompt;
+          promptInput.oninput = () => item.prompt = promptInput.value;
+
+          const targetInput = document.createElement('input');
+          targetInput.placeholder = 'Target words (comma separated)';
+          targetInput.value = item.targetWords.join(', ');
+          targetInput.oninput = () => item.targetWords = targetInput.value.split(',').map(s => s.trim()).filter(Boolean);
+
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'btn-ghost';
+          removeBtn.textContent = 'Delete';
+          removeBtn.onclick = () => {
+            set.items.splice(itemIndex, 1);
+            renderStudySets();
+            populateSetSelect();
+          };
+
+          row.append(promptInput, targetInput, removeBtn);
+          body.appendChild(row);
+        });
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn-primary';
+        addBtn.textContent = 'Add item';
+        addBtn.onclick = () => {
+          set.items.push({ prompt: '', targetWords: [] });
+          renderStudySets();
+        };
+
+        body.appendChild(addBtn);
+        card.appendChild(body);
+        list.appendChild(card);
+      });
+    }
+
+    // ----- Set selection -----
+    function populateSetSelect() {
+      const select = $('set-select');
+      select.innerHTML = '';
+      if (studySets.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No sets available';
+        select.appendChild(opt);
+        select.disabled = true;
+        return;
+      }
+      select.disabled = false;
+      studySets.forEach(set => {
+        const opt = document.createElement('option');
+        opt.value = set.name;
+        opt.textContent = set.name;
+        select.appendChild(opt);
+      });
+      const last = localStorage.getItem(STORAGE_KEYS.lastSet);
+      if (last && studySets.find(s => s.name === last)) {
+        select.value = last;
+      }
+      $('set-hint').textContent = `${select.value ? '' : 'Select a set to play.'}`;
+    }
+
+    // ----- Import / export -----
+    function downloadSets() {
+      const blob = new Blob([JSON.stringify(studySets, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'study_sets.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function openImportModal() {
+      $('import-modal').classList.remove('hidden');
+      $('import-error').textContent = '';
+      $('import-text').value = '';
+    }
+
+    function closeImportModal() {
+      $('import-modal').classList.add('hidden');
+    }
+
+    function validateImportedSets(parsed) {
+      if (!Array.isArray(parsed)) return false;
+      return parsed.every(set => set && typeof set.name === 'string' && Array.isArray(set.items) && set.items.every(item => item && typeof item.prompt === 'string' && Array.isArray(item.targetWords)));
+    }
+
+    function handleImport() {
+      const text = $('import-text').value.trim();
+      try {
+        const parsed = JSON.parse(text);
+        if (!validateImportedSets(parsed)) throw new Error('Invalid structure');
+        studySets = parsed;
+        renderStudySets();
+        populateSetSelect();
+        showManageMessage('Imported sets. Remember to save locally.', 'success');
+        closeImportModal();
+      } catch (e) {
+        $('import-error').textContent = 'Invalid JSON. Ensure it is an array of sets with name, items, prompt, and targetWords.';
+      }
+    }
+
+    // ----- Game helpers -----
+    function restoreLastSelections() {
+      const lastDiff = localStorage.getItem(STORAGE_KEYS.lastDifficulty) || 'medium';
+      document.querySelectorAll('input[name="difficulty"]').forEach(r => {
+        r.checked = r.value === lastDiff;
+      });
+      const select = $('set-select');
+      const lastSet = localStorage.getItem(STORAGE_KEYS.lastSet);
+      if (lastSet && studySets.find(s => s.name === lastSet)) select.value = lastSet;
+    }
+
+    function getSelectedSet() {
+      const name = $('set-select').value;
+      return studySets.find(s => s.name === name) || null;
+    }
+
+    function difficultyLabel() {
+      const value = document.querySelector('input[name="difficulty"]:checked').value;
+      return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    function updateStartButtonState() {
+      const set = getSelectedSet();
+      const hasItems = set && set.items.length > 0;
+      const start = $('btn-start');
+      start.disabled = !hasItems || !selectedMode;
+      $('status-line').textContent = hasItems ? 'Idle' : 'Create or import a study set first.';
+    }
+
+    function selectMode(mode) {
+      selectedMode = mode;
+      document.querySelectorAll('.mode-toggle button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+      updateBestDisplay();
+      updateStartButtonState();
+    }
+
+    function setGamePanels(state) {
+      ['idle-panel','prompt-panel','evaluate-panel','gameover-panel'].forEach(id => $(id).classList.add('hidden'));
+      $(state).classList.remove('hidden');
+    }
+
+    function showHearts(value, element) {
+      if (!element) return;
+      const hearts = [];
+      let remaining = value;
+      for (let i=0;i<3;i++) {
+        if (remaining >= 1) {
+          hearts.push('❤');
+          remaining -=1;
+        } else if (remaining >= 0.5) {
+          hearts.push('💔');
+          remaining -=0.5;
+        }
+      }
+      element.textContent = hearts.join(' ');
+    }
+
+    function pickRandomItem(set, lastIndex) {
+      if (!set || set.items.length === 0) return null;
+      let idx = Math.floor(Math.random() * set.items.length);
+      if (set.items.length > 1 && idx === lastIndex) {
+        idx = (idx + 1) % set.items.length;
+      }
+      return { item: set.items[idx], index: idx };
+    }
+
+    function resetEvaluation() {
+      evaluation = { performance: null, target: null, finalPoints: 0 };
+      document.querySelectorAll('#performance-buttons .pill-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('#target-buttons .pill-btn').forEach(btn => btn.classList.remove('active'));
+      $('base-points').textContent = '0';
+      $('multiplier').textContent = '1.0x';
+      $('final-points').textContent = '0';
+      $('btn-confirm').disabled = true;
+    }
+
+    function computeRoundPoints(perf, targetCount, difficulty) {
+      const baseCorrect = perf === 'nailed' ? 3 : perf === 'almost' ? 2 : 0;
+      const difficultyMultiplier = difficulty === 'hard' ? 3 : difficulty === 'easy' ? 1 : 2;
+      const basePoints = baseCorrect * difficultyMultiplier;
+      const multiplier = 1 + (targetCount * 0.5);
+      const finalPoints = Math.round(basePoints * multiplier * 10) / 10;
+      return { basePoints, multiplier, finalPoints };
+    }
+
+    // ----- Game flow -----
+    function startRun() {
+      const set = getSelectedSet();
+      if (!selectedMode) {
+        alert('Choose a mode before starting.');
+        return;
+      }
+      if (!set || set.items.length === 0) {
+        alert('Please create or import a study set first.');
+        return;
+      }
+      const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+      localStorage.setItem(STORAGE_KEYS.lastDifficulty, difficulty);
+      localStorage.setItem(STORAGE_KEYS.lastSet, set.name);
+      currentRun = {
+        mode: selectedMode,
+        setName: set.name,
+        difficulty,
+        score: 0,
+        lives: 3,
+        streak: 0,
+        rounds: 0,
+        lastIndex: null,
+        timerId: null,
+        timeLeft: 5
+      };
+      $('status-line').textContent = 'Run started';
+      if (selectedMode === 'endless') {
+        $('streak-display').classList.remove('hidden');
+      } else {
+        $('streak-display').classList.add('hidden');
+      }
+      nextRound();
+    }
+
+    function nextRound() {
+      const set = getSelectedSet();
+      if (!set) return;
+      const pick = pickRandomItem(set, currentRun.lastIndex);
+      if (!pick) return;
+      currentRun.lastIndex = pick.index;
+      currentRun.currentItem = pick.item;
+      setGamePanels('prompt-panel');
+      $('prompt-text').textContent = pick.item.prompt || 'Untitled prompt';
+      $('prompt-tags').innerHTML = '';
+      pick.item.targetWords.forEach(word => {
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.textContent = word;
+        $('prompt-tags').appendChild(span);
+      });
+      $('difficulty-label').textContent = difficultyLabel();
+      showHearts(currentRun.lives, $('lives-display'));
+      $('streak-display').textContent = selectedMode === 'endless' ? `Streak: ${currentRun.streak}` : '';
+      startTimer();
+    }
+
+    function startTimer() {
+      clearInterval(currentRun?.timerId);
+      currentRun.timeLeft = 5;
+      $('timer-number').textContent = '5';
+      $('timer-bar').style.width = '100%';
+      currentRun.timerId = setInterval(() => {
+        currentRun.timeLeft -= 0.1;
+        if (currentRun.timeLeft <= 0) {
+          stopTimer();
+          goToEvaluation();
+        } else {
+          $('timer-number').textContent = Math.ceil(currentRun.timeLeft).toString();
+          const pct = Math.max(0, (currentRun.timeLeft / 5) * 100);
+          $('timer-bar').style.width = pct + '%';
+        }
+      }, 100);
+    }
+
+    function stopTimer() {
+      if (currentRun && currentRun.timerId) {
+        clearInterval(currentRun.timerId);
+        currentRun.timerId = null;
+      }
+    }
+
+    function goToEvaluation() {
+      stopTimer();
+      resetEvaluation();
+      $('eval-prompt').textContent = currentRun.currentItem.prompt;
+      $('eval-difficulty').textContent = difficultyLabel();
+      showHearts(currentRun.lives, $('eval-lives'));
+      if (selectedMode === 'endless') {
+        $('eval-streak').classList.remove('hidden');
+        $('eval-streak').textContent = `Streak: ${currentRun.streak}`;
+      } else {
+        $('eval-streak').classList.add('hidden');
+      }
+      setGamePanels('evaluate-panel');
+    }
+
+    function applyRoundResults() {
+      const perf = evaluation.performance;
+      const target = evaluation.target;
+      const { finalPoints } = computeRoundPoints(perf, target, currentRun.difficulty);
+      currentRun.score += finalPoints;
+      currentRun.rounds += 1;
+      if (currentRun.mode === 'survival') {
+        if (perf === 'almost') currentRun.lives -= 0.5;
+        if (perf === 'freeze') currentRun.lives -= 1;
+        if (currentRun.lives <= 0) {
+          return endRun();
+        }
+        return nextRound();
+      }
+      if (currentRun.mode === 'endless') {
+        if (perf === 'nailed') {
+          currentRun.streak += 1;
+          return nextRound();
+        }
+        return endRun();
+      }
+    }
+
+    function endRun() {
+      stopTimer();
+      setGamePanels('gameover-panel');
+      $('final-score').textContent = currentRun.score.toFixed(1);
+      $('final-rounds-row').classList.toggle('hidden', currentRun.mode !== 'survival');
+      $('final-streak-row').classList.toggle('hidden', currentRun.mode !== 'endless');
+      $('best-endless-row').classList.toggle('hidden', currentRun.mode !== 'endless');
+      $('best-survival-row').classList.toggle('hidden', currentRun.mode !== 'survival');
+      $('final-rounds').textContent = currentRun.rounds;
+      $('final-streak').textContent = currentRun.streak;
+
+      if (currentRun.mode === 'survival') {
+        if (currentRun.score > bestScores.survival) {
+          bestScores.survival = currentRun.score;
+          localStorage.setItem(STORAGE_KEYS.bestSurvival, bestScores.survival);
+        }
+        $('best-survival').textContent = bestScores.survival.toFixed(1);
+      } else {
+        if (currentRun.streak > bestScores.endlessStreak) {
+          bestScores.endlessStreak = currentRun.streak;
+          localStorage.setItem(STORAGE_KEYS.bestEndlessStreak, bestScores.endlessStreak);
+        }
+        if (currentRun.score > bestScores.endlessScore) {
+          bestScores.endlessScore = currentRun.score;
+          localStorage.setItem(STORAGE_KEYS.bestEndlessScore, bestScores.endlessScore);
+        }
+        $('best-endless').textContent = bestScores.endlessStreak;
+        $('best-endless-score').textContent = bestScores.endlessScore.toFixed(1);
+      }
+      updateBestDisplay();
+    }
+
+    function endRunEarly() {
+      if (!currentRun) return;
+      stopTimer();
+      endRun();
+    }
+
+    // ----- Event handlers -----
+    function attachHandlers() {
+      $('tab-study').onclick = () => {
+        $('tab-study').classList.add('active');
+        $('tab-game').classList.remove('active');
+        $('manage-page').classList.remove('hidden');
+        $('game-page').classList.add('hidden');
+      };
+      $('tab-game').onclick = () => {
+        $('tab-game').classList.add('active');
+        $('tab-study').classList.remove('active');
+        $('game-page').classList.remove('hidden');
+        $('manage-page').classList.add('hidden');
+      };
+
+      $('btn-new-set').onclick = () => {
+        const num = studySets.length + 1;
+        studySets.push({ name: `New Set ${num}`, items: [] });
+        renderStudySets();
+        populateSetSelect();
+      };
+      $('btn-save').onclick = saveStudySets;
+      $('btn-download').onclick = downloadSets;
+      $('btn-download-2').onclick = downloadSets;
+      $('btn-import').onclick = openImportModal;
+      $('btn-import-cancel').onclick = closeImportModal;
+      $('btn-close-modal').onclick = closeImportModal;
+      $('btn-import-confirm').onclick = handleImport;
+
+      $('set-select').onchange = () => {
+        localStorage.setItem(STORAGE_KEYS.lastSet, $('set-select').value);
+        updateStartButtonState();
+      };
+      document.querySelectorAll('input[name="difficulty"]').forEach(r => {
+        r.onchange = () => {
+          localStorage.setItem(STORAGE_KEYS.lastDifficulty, r.value);
+        };
+      });
+      $('mode-survival').onclick = () => selectMode('survival');
+      $('mode-endless').onclick = () => selectMode('endless');
+
+      $('btn-start').onclick = startRun;
+      $('btn-done').onclick = goToEvaluation;
+      $('btn-end-run').onclick = endRunEarly;
+
+      $('performance-buttons').addEventListener('click', (e) => {
+        if (!e.target.dataset.perf) return;
+        document.querySelectorAll('#performance-buttons .pill-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        evaluation.performance = e.target.dataset.perf;
+        updateEvaluationNumbers();
+      });
+      $('target-buttons').addEventListener('click', (e) => {
+        if (!e.target.dataset.target) return;
+        document.querySelectorAll('#target-buttons .pill-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        evaluation.target = Number(e.target.dataset.target);
+        updateEvaluationNumbers();
+      });
+      $('btn-confirm').onclick = () => {
+        applyRoundResults();
+      };
+      $('btn-play-again').onclick = () => {
+        setGamePanels('idle-panel');
+        startRun();
+      };
+      $('btn-back-menu').onclick = () => {
+        setGamePanels('idle-panel');
+        $('status-line').textContent = 'Idle';
+      };
+
+      $('btn-drive-save').onclick = saveToDrive;
+    }
+
+    function updateEvaluationNumbers() {
+      if (!evaluation.performance || evaluation.target === null) {
+        $('btn-confirm').disabled = true;
+        return;
+      }
+      const difficulty = currentRun?.difficulty || document.querySelector('input[name="difficulty"]:checked').value;
+      const { basePoints, multiplier, finalPoints } = computeRoundPoints(evaluation.performance, evaluation.target, difficulty);
+      evaluation.finalPoints = finalPoints;
+      $('base-points').textContent = basePoints.toFixed(1);
+      $('multiplier').textContent = `${multiplier.toFixed(1)}x`;
+      $('final-points').textContent = finalPoints.toFixed(1);
+      $('btn-confirm').disabled = false;
+    }
+
+    // ----- Google Drive upload (best-effort) -----
+    let gapiLoading = null;
+    function loadGapi() {
+      if (window.gapi) return Promise.resolve();
+      if (gapiLoading) return gapiLoading;
+      gapiLoading = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://apis.google.com/js/api.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load Google API'));
+        document.body.appendChild(script);
+      });
+      return gapiLoading;
+    }
+
+    async function saveToDrive() {
+      const clientId = $('client-id').value.trim();
+      if (!clientId) {
+        $('drive-status').textContent = 'Please provide your OAuth Client ID before saving.';
+        return;
+      }
+      try {
+        await loadGapi();
+      } catch (e) {
+        $('drive-status').textContent = 'Google API could not be loaded in this environment.';
+        return;
+      }
+      if (!window.gapi) {
+        $('drive-status').textContent = 'Google API unavailable.';
+        return;
+      }
+      $('drive-status').textContent = 'Authorizing...';
+      gapi.load('client:auth2', async () => {
+        try {
+          await gapi.client.init({
+            clientId,
+            scope: 'https://www.googleapis.com/auth/drive.file',
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+          });
+          const auth = gapi.auth2.getAuthInstance();
+          await auth.signIn();
+          const fileName = 'five_second_study_sets.json';
+          const content = JSON.stringify({ studySets }, null, 2);
+          const boundary = '-------314159265358979323846';
+          const delimiter = `--${boundary}\r\n`;
+          const closeDelim = `--${boundary}--`;
+          const metadata = { name: fileName, mimeType: 'application/json' };
+          const multipartRequestBody =
+            delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+            JSON.stringify(metadata) + '\r\n' +
+            delimiter + 'Content-Type: application/json\r\n\r\n' +
+            content + '\r\n' +
+            closeDelim;
+
+          // Try to find existing file by name
+          const existing = await gapi.client.drive.files.list({ q: `name='${fileName}' and trashed=false`, fields: 'files(id, name)', spaces: 'drive' });
+          if (existing.result.files && existing.result.files.length > 0) {
+            const fileId = existing.result.files[0].id;
+            await gapi.client.request({
+              path: `/upload/drive/v3/files/${fileId}`,
+              method: 'PATCH',
+              params: { uploadType: 'multipart' },
+              headers: { 'Content-Type': 'multipart/related; boundary=' + boundary },
+              body: multipartRequestBody
+            });
+          } else {
+            await gapi.client.request({
+              path: '/upload/drive/v3/files',
+              method: 'POST',
+              params: { uploadType: 'multipart' },
+              headers: { 'Content-Type': 'multipart/related; boundary=' + boundary },
+              body: multipartRequestBody
+            });
+          }
+          $('drive-status').textContent = 'Saved to Drive!';
+        } catch (e) {
+          $('drive-status').textContent = 'Drive save failed. Ensure the Client ID and permissions are correct.';
+        }
+      });
+    }
+
+    // Start app
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
 </html>
